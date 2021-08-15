@@ -12,7 +12,7 @@ Here is our [requirements.txt](https://gitlab.com/compositionalenterprises/play-
 ---
 - src: nickjj.docker
   name: docker
-- src: git@gitlab.com:compositionalenterprises/role-compositional
+- src: https://gitlab.com/compositionalenterprises/ansible-collection-compositionalenterprises.ourcompose.git
   scm: git
   version: master
   name: compositional

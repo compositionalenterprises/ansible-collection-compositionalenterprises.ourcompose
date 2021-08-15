@@ -43,7 +43,7 @@ tags: []
 dependencies: {}
 
 # The URL of the originating SCM repository
-repository: https://gitlab.com/compositionalenterprises/role-compositional
+repository: https://gitlab.com/compositionalenterprises/ansible-collection-compositionalenterprises.ourcompose
 
 # The URL to any online docs
 documentation: https://compositionalenterprises.ourcompose.com/bookstack/
