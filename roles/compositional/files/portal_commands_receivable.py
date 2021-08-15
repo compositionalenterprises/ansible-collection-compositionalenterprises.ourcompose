@@ -80,7 +80,7 @@ def build_container_image(collection_version, build_target):
             "    pip3 install 'ansible>=2.10,<2.11' ansible-vault requests "
             "tabulate packaging && \\\n"
             "    git clone https://gitlab.com/compositionalenterprises/"
-            "play-compositional.git /var/ansible\n"
+            "ansible-project-ourcompose_management.git /var/ansible\n"
             "WORKDIR /var/ansible \n"
             "RUN sed -i 's/, plays@.\/.vault_pass//' ansible.cfg && \\\n"
             "    rm -rf playbooks/group_vars/ && \\\n"

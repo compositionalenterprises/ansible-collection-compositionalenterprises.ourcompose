@@ -6,7 +6,7 @@ This role sets up a VM to host what amounts to a cloud-in-a-box; a combination o
 
 # Requirements
 
-Here is our [requirements.txt](https://gitlab.com/compositionalenterprises/play-compositional/-/blob/master/requirements.yml) that we use when we set up the environment for our playbooks to execute in:
+Here is our [requirements.txt](https://gitlab.com/compositionalenterprises/ansible-collection-compositionalenterprises.ourcompose/-/blob/master/requirements.yml) that we use when we set up the environment for our playbooks to execute in:
 
 ```yaml
 ---
