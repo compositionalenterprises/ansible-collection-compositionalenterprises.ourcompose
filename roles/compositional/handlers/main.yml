@@ -1,6 +1,4 @@
 ---
-# handlers file for role-compositional
-
 - name: Restart Frontend
   command: docker restart proxy
 
