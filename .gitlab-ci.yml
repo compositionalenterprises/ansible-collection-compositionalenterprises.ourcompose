@@ -40,11 +40,11 @@ Push tag:
   script:
     # First we want to create the docker container
     - apk add --update git python3 py3-pip curl
-    - pip3 install docker argparse
+    - pip3 install docker argparse 'ansible>=2.10,<2.11'
     - python3 roles/compositional/files/build_image.py --collection_version $CI_COMMIT_TAG
     # Now, since this is a tag, we wanna push the new tag version to ansible galaxy
     - ansible-galaxy collection build --force
-    - ansible-galaxy collection publish compositionalenterprises-ourcompose-3.0.1.tar.gz --token $ANSIBLE_GALAXY_TOKEN
+    - ansible-galaxy collection publish "compositionalenterprises-ourcompose-${CI_COMMIT_TAG}.tar.gz" --token $ANSIBLE_GALAXY_TOKEN
     # Then we want to push this up to ansible-galaxy as a collection
     # Then we notify ourcompose-alerts that this got done.
     - curl 'https://'$HOME_SERVER'/_matrix/client/r0/rooms/'$ROOM_ID'/send/m.room.message/'$CI_COMMIT_SHA'?access_token='$ACCESS_TOKEN'' -X PUT --data '{"msgtype":"m.text","body":"OurCompose Collection - Gitlab Tag Built - $CI_COMMIT_TAG"}'
