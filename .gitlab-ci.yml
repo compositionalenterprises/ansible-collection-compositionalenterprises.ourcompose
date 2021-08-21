@@ -39,8 +39,8 @@ Push tag:
     - tags
   script:
     # First we want to create the docker container
-    - apk add --update git python3 py3-pip curl
-    - pip3 install docker argparse 'ansible>=2.10,<2.11'
+    - apk add --update git python3 py3-pip curl gcc libffi-dev musl-dev openssl-dev python3-dev
+    - CRYPTOGRAPHY_DONT_BUILD_RUST=1 pip3 install docker argparse 'ansible>=2.10,<2.11'
     - python3 roles/compositional/files/build_image.py --collection_version $CI_COMMIT_TAG
     # Now, since this is a tag, we wanna push the new tag version to ansible galaxy
     - ansible-galaxy collection build --force
