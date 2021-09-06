@@ -29,21 +29,21 @@
               container_name: nextcloud
               restart: always
               volumes:
-                  - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_data:/var/www/html/data"
-                  - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_config:/var/www/html/config"
-                  - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_themes:/var/www/html/themes"
-                  - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_custom_apps:/var/www/html/custom_apps"
+                - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_data:/var/www/html/data"
+                - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_config:/var/www/html/config"
+                - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_themes:/var/www/html/themes"
+                - "/srv/{{ compositional_nextcloud_storage }}/nextcloud_custom_apps:/var/www/html/custom_apps"
               networks:
-                  - frontend
-                  - backend
+                - frontend
+                - backend
               environment:
-                  MYSQL_HOST: "database"
-                  MYSQL_DATABASE: "nextcloud"
-                  MYSQL_USER: "nextcloud"
-                  MYSQL_PASSWORD: "{{ compositional_nextcloud_backend_password }}"
-                  NEXTCLOUD_ADMIN_USER: "{{ compositional_nextcloud_admin_user }}"
-                  NEXTCLOUD_ADMIN_PASSWORD: "{{ compositional_nextcloud_admin_password }}"
-                  NEXTCLOUD_TRUSTED_DOMAINS: "{{ environment_domain }} nextcloud"
+                MYSQL_HOST: "database"
+                MYSQL_DATABASE: "nextcloud"
+                MYSQL_USER: "nextcloud"
+                MYSQL_PASSWORD: "{{ compositional_nextcloud_backend_password }}"
+                NEXTCLOUD_ADMIN_USER: "{{ compositional_nextcloud_admin_user }}"
+                NEXTCLOUD_ADMIN_PASSWORD: "{{ compositional_nextcloud_admin_password }}"
+                NEXTCLOUD_TRUSTED_DOMAINS: "{{ environment_domain }} nextcloud"
               healthcheck:
                 test: "{{ compositional_nextcloud_healthcheck }}"
                 interval: 5s
@@ -119,10 +119,26 @@
   when: compositional_nextcloud_legacy_dbtableprefix
   notify: 'Restart Nextcloud'
 
+- name: (nextcloud) Set up cron job for background tasks
+  cron:
+    name: 'Nextcloud Background Tasks'
+    minute: '*/5'
+    job: '/usr/bin/docker exec -u 33 nextcloud php -f cron.php'
+
+- name: (nextcloud) Gather the list of applications present in the nextcloud instance
+  shell:
+    cmd: 'docker exec -iu 33 nextcloud bash -c "./occ app:list"'
+  failed_when: False
+  register: compositional_nextcloud_app_list
+
+- name: (nextcloud) Change the refresh period of calendar subscriptions
+  shell:
+    cmd: 'docker exec -iu 33 nextcloud bash -c "php occ config:app:set dav calendarSubscriptionRefreshRate --value \"P20M\""'
+  when: "'calendar' in compositional_nextcloud_app_list['stdout']"
+
 #
 # Bind Mountpoints
 #
-
 - name: (nextcloud) Find source filesystem directory
   shell: for i in $(docker inspect --format {% raw %}{{.GraphDriver.Data.LowerDir}}{% endraw %} nextcloud | tr ':' ' '); do if [[ -d ${i}{{ item['directory'] }} ]]; then echo ${i}; fi; done | head -n 1
   args:
