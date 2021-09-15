@@ -114,7 +114,7 @@
   register: compositional_bitwarden_admin_post_result
   failed_when:
     - "'error' in compositional_bitwarden_admin_post_result['stdout']"
-    - "'User already exists' not in compositional_bitwarden_admin_post_result['stdout']"
+    - "'user already exists' not in compositional_bitwarden_admin_post_result['stdout'].lower()"
 
 - name: Remove the local command file
   file:
