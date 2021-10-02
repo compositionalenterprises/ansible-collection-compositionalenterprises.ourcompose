@@ -2,7 +2,7 @@
 
 ![OurCompose Productivity Suite](https://gitlab.com/compositionalenterprises/jekyll-ourcomposecast/-/raw/master/assets/logos/banner_logo.jpg)
 
-This role sets up a VM to host what amounts to a cloud-in-a-box; a combination of various cloud services all hosted in subdirectories of a given domain. 
+We took a handful of open source applications and integrated them together into a product named OurCompose making it easy for anyone to deploy a suite of tools at the click of a button.
 
 ### [Feature Roadmap](https://compositionalenterprises.ourcompose.com/kanboard/public/board/245d06ce519a4deba6131ea58a65afa9efc0e6de584e04b08a81c4115322)
 
@@ -10,29 +10,74 @@ The above link will take you to our Roadmap Kanboard where we prioritize tasks f
 
 We also prioritize bugfixes and security vulnerabilities separately, which are not displayed on that board. This board is solely for new features and improvements.
 
+# QuickStart
+
+#### NOTE: This is only for a minimal setup. This will leave all data exposed with default passwords, an unsecured OS, and an unsupported method of installing docker. But it works if you just want to get your hands on it really quickly.
+
+1. Start with a current Ubuntu base OS (Setting up with DNS is preferable, but not required)
+2. Install the following dependencies on the target server like so:
+```bash
+# curl -fsSL https://get.docker.com -o get-docker.sh
+# bash ./get-docker.sh
+# apt install python3-pip
+# pip3 install docker docker-compose
+```
+3. [Install Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) on your own machine (or somewhere else that you would use to run Ansible)
+4. Create the following `requirements.yml` file in a new directory:
+```bash
+$ mkdir ourcompose_project && cd ourcompose_project
+$ cat <<< EOF >> requirements.yml
+---
+collections:
+  - name: https://gitlab.com/compositionalenterprises/ansible-collection-compositionalenterprises.ourcompose.git
+    version: master
+    type: git
+EOF
+```
+5. Use that requirements.yml to install the collection:
+```bash
+$ ansible-galaxy install -fr requirements.yml
+```
+6. Create a playbook to run that collection's role:
+```bash
+$ cat <<< EOF >> ourcompose_playbook.yml
+- hosts: all
+  roles:
+    - role: compositionalenterprises.ourcompose.compositional
+EOF
+```
+7. (OPTIONAL) Specify the services you want to install (by default it installs them all)
+```bash
+$ cat <<< EOF >> ourcompose_playbook.yml
+      compositional_services:
+        - portal
+        - kanboard
+        - nextcloud
+EOF
+```
+8. Run the playbook against the host
+```bash
+$ ansible-playbook -i <server-dns-name-or-ip-addr>, ourcompose.playbook.yml
+```
+#### NOTE: The comma after the server's DNS name or IP address is required, as it "tricks" ansible to using that single string as a hostname rather as a file for the inventory.
+
+You should now be able to access that host at the DNS name or IP address that was specified above. It will be using a self-signed certificate, so you'll likely have to accept an invalid cert prompt.
+
 # Requirements
 
-Here is our [requirements.txt](https://gitlab.com/compositionalenterprises/ansible-collection-compositionalenterprises.ourcompose/-/blob/master/requirements.yml) that we use when we set up the environment for our playbooks to execute in:
+## Operating System
 
-```yaml
----
-- src: nickjj.docker
-  name: docker
-- src: https://gitlab.com/compositionalenterprises/ansible-collection-compositionalenterprises.ourcompose.git
-  scm: git
-  version: master
-  name: compositional
-- src: geerlingguy.certbot
-  name: certbot
-- src: oefenweb.swapfile
-  name: swapfile
-```
+- Supported OS:
+  - Ubuntu 18.04
+  - Ubuntu 20.04
 
-This allows for setting up docker, certbot, and a generous swapfile on the server. However, the only obvious requirement is that docker is set up. Additionally, it is not required to be set up externally facing. It is sufficient to just have it running on the server locally.
+- Swap (optional, but recommended if running with minimal RAM)
 
 ## SSL Certificates
 
-This role assumes that the SSL cert is set up somewhere on the server where docker can mount it as a volume to wherever inside of the proxy container it needs to go. By default:
+This role assumes that the SSL cert is set up somewhere on the server where docker can mount it as a volume to wherever inside of the proxy container it needs to go.
+By default it creates its own self-signed certificates.
+However, those can be overridden by setting the following variables, shown here set up for Let's Encrypt:
 
 ```yaml
 compositional_nginx_cert_volume: '/etc/letsencrypt:/etc/letsencrypt'
@@ -42,12 +87,12 @@ compositional_nginx_cert_privkey: "/etc/letsencrypt/live/{{ environment_domain }
 
 ## Python Libraries
 
-On the remote host, the [docker](https://pypi.org/project/docker/) library needs to be installed. This can be done by simply installing it with the default package manager. However, `nickjj.docker` (above) creates a virtualenv that can be used by passing the ansible python interpreter as an argument to the role:
+On the remote host, [Docker](https://docs.docker.com/engine/install/) needs to be installed.
 
-```yaml
-- role: compositional
-  ansible_python_interpreter: "/usr/bin/env python3-docker"
-```
+The additional python packages also need to be installed so that they are made available to the python interpreter that ansible uses on the remote host:
+- `docker-py`
+- `docker-compose`
+- `systemd-python`
 
 # Role Variables
 
@@ -98,11 +143,14 @@ There are two others that are specific to this role:
 
 ### Database Backend Services
 
-All services that have a database backend (which is most of them) have a variable to set the password for the account that will be created in that database for them to use. **THIS IS INSECURE BY DEFAULT AND SHOULD BE OVERRIDDEN FOR INSTANCES DEPLOYED IN PRODUCTION**. They come in the form of `compositional_<service name>_backend_password`.
+All services that have a database backend (which is most of them) have a variable to set the password for the account that will be created in that database for them to use.
+**THIS IS INSECURE BY DEFAULT AND SHOULD BE OVERRIDDEN FOR INSTANCES DEPLOYED IN PRODUCTION**.
+They come in the form of `compositional_<service name>_backend_password`.
 
 ### Bind Mountpoints
 
-These mountpoints will be able to be set up on any service to be able to bind-mount static assets into the frontend proxy in order to avoid contacting backend servers and speed up the transmission of the assets. They come in the form of `compositional_< service >_bind_mountpoints`.
+These mountpoints will be able to be set up on any service to be able to bind-mount static assets into the frontend proxy in order to avoid contacting backend servers and speed up the transmission of the assets.
+They come in the form of `compositional_< service >_bind_mountpoints`.
 
 This variable is in the following format:
 
@@ -115,7 +163,11 @@ compositional_firefly_bind_mountpoints:
   - {location: '/firefly/v1/lib/', directory: '/var/www/firefly-iii/public/v1/lib'}
 ```
 
-So this is a list of dictionaries. The dictionaries have the keys `location`, and `directory`. The `location` is the subdomain path that should be intercepted and redirected to the local bindmount. The `directory` key is the location within the image where the assets are location. Alternatively, if the path in the `directory` key starts with `/srv`, the role will look at the host's `/srv` directory for that location, rather than inside the image.
+So this is a list of dictionaries.
+The dictionaries have the keys `location`, and `directory`.
+The `location` is the subdomain path that should be intercepted and redirected to the local bindmount.
+The `directory` key is the location within the image where the assets are location.
+Alternatively, if the path in the `directory` key starts with `/srv`, the role will look at the host's `/srv` directory for that location, rather than inside the image.
 
 #### NOTE: This is hard-coded right now. If it becomes an issue, we can make the `/srv` location a variable, but for now all `directory` keys that point to `/srv` are expected to be on the host.
 
@@ -162,7 +214,10 @@ See the [CommandCenter Repo - Passing Production Keys](https://gitlab.com/compos
 
 # New Services
 
-Whenever new services are added, we should make sure they are doing the same things that the other ones are. It's typically easiest to start off finding the service that's most similar to the new one. The files for the NGINX configuration file and the task file can be copied, renamed, and edited. Then the variables section can be copied to a new section and renamed, and the service added to the list of services in the `defaults/main.yml` file.
+Whenever new services are added, we should make sure they are doing the same things that the other ones are.
+It's typically easiest to start off finding the service that's most similar to the new one.
+The files for the NGINX configuration file and the task file can be copied, renamed, and edited.
+Then the variables section can be copied to a new section and renamed, and the service added to the list of services in the `defaults/main.yml` file.
 
 ## Setup Steps
 

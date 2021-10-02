@@ -1,4 +1,9 @@
 ---
+- name: Use python3 if we haven't already set a custom interpreter
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/env python3"
+  when: ansible_python_interpreter is not defined
+
 - name: Install necessary packages
   apt:
     name: "{{ pkgs }}"
@@ -23,10 +28,33 @@
     env: yes
     job: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'
 
+- name: Set up default openssl certs
+  when: compositional_nginx_cert_privkey == "/usr/local/share/certs/privkey.pem"
+  block:
+    - name: Create the certs directory
+      file:
+        path: "{{ compositional_nginx_cert_privkey | dirname }}"
+        recurse: True
+        state: directory
+
+    - name: Create the cert files
+      shell:
+        cmd: openssl req -newkey rsa:2048 -new -x509 -days 3650 -passout 'pass:{{ compositional_nginx_cert_password }}' -subj '/CN={{ inventory_hostname }}' -keyout {{ compositional_nginx_cert_privkey }} -out {{ compositional_nginx_cert_fullchain }}
+        creates: "{{ compositional_nginx_cert_privkey }}"
+      register: compositional_main_create_cert_files
+
+    - name: Unencrypt the keyfile
+      shell:
+        cmd: openssl rsa -passin 'pass:{{ compositional_nginx_cert_password }}' -in {{ compositional_nginx_cert_privkey }} -out {{ compositional_nginx_cert_privkey }}
+      when: compositional_main_create_cert_files['changed']
+
 - include_tasks: "./{{ item }}.yml"
   with_items:
     - "{{ compositional_frontend_service }}"
     - "{{ compositional_backend_service }}"
+
+- include_tasks: "./portal.yml"
+  when: "'portal' not in compositional_services"
 
 - name: Setup Services
   block:

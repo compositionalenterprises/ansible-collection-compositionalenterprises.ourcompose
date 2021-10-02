@@ -17,7 +17,7 @@ compositional_services:
 # Here we want to default to portal if it's being deployed.
 # Otherwise, just default to nill and have it redirect to the
 # default html welcome page
-compositional_webroot_redirect: "{% if 'portal' in compositional_services %}portal{% else %}index.html{% endif %}"
+compositional_webroot_redirect: "portal"
 # Here we default to always setting up the services. Without this in place, we only install the frontend and the backend.
 compositional_setup_services: True
 # If we have any redirects to create, we can add them in the environment.
@@ -38,12 +38,12 @@ compositional_setup_services: True
 #   - {domain: 'ourcomposesignup.com', redirect: 'https://ourcompose.com/commandcenter', cert: 'live/ourcomposesignup.com/fullchain.pem', key: 'live/ourcomposesignup.com/privkey.pem'}
 compositional_domain_redirects: []
 compositional_no_log: True
-
-#
-# Environment Vars
-#
-environment_domain: 'example.com'
+environment_domain: "{{ inventory_hostname }}"
 environment_admin: 'admin'
+compositional_instance_name: 'Instance Name'
+# If you bring your own certs, they should probably be able to be validated.
+# However, you can always override this if necessary
+compositional_validate_certs: "{% if compositional_nginx_cert_privkey == '/usr/local/share/certs/privkey.pem' %}False{% else %}True{% endif %}"
 
 #
 # Reverse Proxy
@@ -60,9 +60,14 @@ compositional_nginx_state: 'present'
 compositional_nginx_restarted: no
 compositional_nginx_version: '1.17'
 compositional_nginx_storage: 'local'
-compositional_nginx_cert_volume: '/etc/letsencrypt:/etc/letsencrypt'
-compositional_nginx_cert_fullchain: "/etc/letsencrypt/live/{{ environment_domain }}/fullchain.pem"
-compositional_nginx_cert_privkey: "/etc/letsencrypt/live/{{ environment_domain }}/privkey.pem"
+# TODO: Set these in project
+#compositional_nginx_cert_volume: '/etc/letsencrypt:/etc/letsencrypt'
+#compositional_nginx_cert_fullchain: "/etc/letsencrypt/live/{{ environment_domain }}/fullchain.pem"
+#compositional_nginx_cert_privkey: "/etc/letsencrypt/live/{{ environment_domain }}/privkey.pem"
+compositional_nginx_cert_volume: '/usr/local/share/certs:/usr/local/share/certs'
+compositional_nginx_cert_fullchain: "/usr/local/share/certs/fullchain.pem"
+compositional_nginx_cert_privkey: "/usr/local/share/certs/privkey.pem"
+compositional_nginx_cert_password: "testpassword"
 # This could probably be better
 compositional_nginx_healthcheck: |
   service nginx status || exit 1
@@ -323,6 +328,8 @@ compositional_portal_backend_password: 'testpassword'
 compositional_portal_production_key: 'cb569b8ea39a7dada216dffaee8f7ec3'
 compositional_portal_production_yml_enc: 'mMb7knWzem8t5jXbs66LiTh+MuR4VhwttCJcshES87zG37kDxQ6tqKE5FiW3BW70orag1vVTxfL6kxnd665c/P0L9/ImWFKtbPNBbomsy/CVyFbQo4VkWC0SOi1FzKNFKkmLPdjcqFt0A37BYQjXdTNk+7x9IGyTI2tZg4h2p6qqGXB5NBJYIWoXEmCTnO9H05HxMoCqhTQCoCZeKeXKVIppweTsT80LIIVM6VJIomaSItp/XzMrmvaKek466hw9koR5z7dinzAtJnnsrBzbfF2+yAtryp8jpi+gvpll--qAM4pQghNMegIdn5--uKGo/l6lbwxIORk+raRVOw=='
 compositional_portal_ourcomposebot_ro_key: ''
+compositional_portal_rundeck_apitoken: ''
+ourcompose_rundeck_apitoken: ''
 compositional_portal_admin_password: 'testpassword'
 compositional_portal_org_name: "{{ environment_domain.split('.')[0].upper() }}"
 compositional_portal_admin_email: "{{ environment_admin }}@{{ environment_domain }}"

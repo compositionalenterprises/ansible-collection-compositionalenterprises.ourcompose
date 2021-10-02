@@ -136,6 +136,17 @@
     cmd: 'docker exec -iu 33 nextcloud bash -c "php occ config:app:set dav calendarSubscriptionRefreshRate --value \"P20M\""'
   when: "'calendar' in compositional_nextcloud_app_list['stdout']"
 
+- name: (nextcloud) Get trusted domains
+  shell: docker exec -u 33 -i nextcloud bash -c "php occ config:system:get trusted_domains"
+  register: compositional_nextcloud_get_trusted_domains
+
+- name: (nextcloud) Add missing trusted domains
+  shell: docker exec -u 33 -i nextcloud bash -c "php occ config:system:set trusted_domains {{ item['number'] }} --value={{ item['domain'] }}"
+  when: item['domain'] not in compositional_nextcloud_get_trusted_domains['stdout_lines']
+  loop:
+    - { number: "{{ compositional_nextcloud_get_trusted_domains['stdout_lines'] | length }}", domain: "{{ environment_domain }}" }
+    - { number: "{{ compositional_nextcloud_get_trusted_domains['stdout_lines'] | length + 1 }}", domain: 'nextcloud' }
+
 #
 # Bind Mountpoints
 #
