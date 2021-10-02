@@ -8,7 +8,7 @@ def build_container_images(collection_version):
     # We have to fix the jinja template, and make it an actual python script again
     # This is so that we can import the below
     cwd = os.path.dirname(__file__)
-    cmd1 = f"cp {cwd}/../templates/portal_commands_receivable.py.j2"
+    cmd1 = f"cp {cwd}/../templates/portal_commands_receivable.py.j2 "
     cmd2 = f"{cwd}/portal_commands_receivable.py"
     subprocess.run(cmd1 + cmd2, shell=True)
     cmd1 = f"sed -i '1,4d' {cwd}/portal_commands_receivable.py",
