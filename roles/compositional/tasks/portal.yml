@@ -2,26 +2,26 @@
 #
 # Set up the commands_receivable supervisor daemon
 #
-- name: Set up SSH keys
+- name: (portal) Set up SSH keys
   openssh_keypair:
     path: "~/.ssh/commands_receivable"
     type: ed25519
     state: present
 
-- name: Slurp public key file contents
+- name: (portal) Slurp public key file contents
   slurp:
     src: "~/.ssh/commands_receivable.pub"
   register: compositional_portal_crpubkey
 
-- name: Add Commands Receivable public key to authorized key files
+- name: (portal) Add Commands Receivable public key to authorized key files
   authorized_key:
     user: root
     state: present
     key: "{{ compositional_portal_crpubkey['content'] | b64decode }}"
 
 - name: (portal) Commands receivable executable is deployed
-  copy:
-    src: 'portal_commands_receivable.py'
+  template:
+    src: '../templates/portal_commands_receivable.py.j2'
     dest: '/usr/local/bin/commands_receivable.py'
     mode: '0744'
 
@@ -66,7 +66,7 @@
     path: "/srv/{{ compositional_portal_storage }}/portal_credentials"
     state: directory
 
-- name: Create credentials files
+- name: (portal) Create credentials files
   # So, let's review POSIX standards, shall we?
   #
   #     3.206 Line
@@ -120,8 +120,8 @@
                     SERVICES: "{{ compositional_services | join(' ') }}"
                     RAILS_RELATIVE_URL_ROOT: '/portal'
                     HOST: "{{ environment_domain }}"
-                    RUNDECK_API_TOKEN: "{{ ourcompose_rundeck_apitoken }}"
-                    ENVIRONMENT_VAULT_PASSWORD: "{{ lookup('file', '../environment/.vault_pass') }}"
+                    RUNDECK_API_TOKEN: "{{ compositional_portal_rundeck_apitoken | default(ourcompose_rundeck_apitoken, true) }}"
+                    ENVIRONMENT_VAULT_PASSWORD: "{{ lookup('file', '../environment/.vault_pass', errors='warn') | default() }}"
                     INITIAL_INSTALL: "{{ compositional_portal_initial_install }}"
                     ROLE_BRANCH: "{{ compositional_portal_role_branch }}"
                     OURCOMPOSEBOT_RO_KEY: "{{ compositional_portal_ourcomposebot_ro_key }}"
@@ -175,10 +175,11 @@
                     SERVICES: "{{ compositional_services | join(' ') }}"
                     RAILS_RELATIVE_URL_ROOT: '/portal'
                     HOST: "{{ environment_domain }}"
-                    RUNDECK_API_TOKEN: "{{ ourcompose_rundeck_apitoken }}"
-                    ENVIRONMENT_VAULT_PASSWORD: "{{ lookup('file', '../environment/.vault_pass') }}"
+                    RUNDECK_API_TOKEN: "{{ compositional_portal_rundeck_apitoken | default(ourcompose_rundeck_apitoken, true) }}"
+                    ENVIRONMENT_VAULT_PASSWORD: "{{ lookup('file', '../environment/.vault_pass', errors='warn') | default() }}"
                     INITIAL_INSTALL: "{{ compositional_portal_initial_install }}"
                     ROLE_BRANCH: "{{ compositional_portal_role_branch }}"
+                    OURCOMPOSEBOT_RO_KEY: "{{ compositional_portal_ourcomposebot_ro_key }}"
                   healthcheck:
                     test: "{{ compositional_portal_healthcheck }}"
                     interval: 5s

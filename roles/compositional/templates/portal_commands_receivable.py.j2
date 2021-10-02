@@ -1,10 +1,71 @@
+{% if ansible_python_interpreter == '/usr/bin/env python3-docker' %}
+{# This is a workaround for having to call the executable itself instead of the shell wrapper script that ansible-docker creates #}
 #!/usr/local/lib/docker/virtualenv/bin/python3 -u
+{% else %}
+#!/usr/bin/env python3
+{% endif %}
 
 import os
 import docker
 import socket
 import subprocess
+from datetime import datetime
 from ast import literal_eval
+
+
+def get_no_cache(build_target, collection_version):
+    # Get the project git repo's last commit time
+    cmd1 = "git clone --branch master --depth=1 https://gitlab.com/"
+    cmd2 = "compositionalenterprises/ansible-project-ourcompose_management.git"
+    project_dir = '/tmp/ansible_project'
+    subprocess.run(cmd1 + cmd2 + ' ' + project_dir, shell=True)
+    cmd1 = "git log -1 --date=short --pretty=format:%ci | cut -d ' ' -f -2"
+    git_proj_timestamp = subprocess.check_output(cmd1, shell=True,
+        universal_newlines=True, cwd=project_dir).strip()
+    # Cleanup git repo
+    subprocess.run("rm -rf {}".format(project_dir), shell=True)
+
+    # Get the project git repo's last commit time
+    cmd1 = f"git clone --branch {collection_version} --depth=1 "
+    cmd2 = "https://gitlab.com/compositionalenterprises/ansible-collection-"
+    cmd3 = "compositionalenterprises.ourcompose.git"
+    collection_dir = '/tmp/ansible_collection'
+    subprocess.run(cmd1 + cmd2 + cmd3 + ' ' + collection_dir, shell=True)
+    cmd1 = "git log -1 --date=short --pretty=format:%ci | cut -d ' ' -f -2"
+    git_coll_timestamp = subprocess.check_output(cmd1, shell=True,
+        universal_newlines=True, cwd=collection_dir).strip()
+    # Cleanup git repo
+    subprocess.run("rm -rf {}".format(collection_dir), shell=True)
+
+    # Get the docker image's last build time
+    try:
+        cmd1 = "docker inspect -f '{% raw %}{{.Created}}{% endraw %}' "
+        cmd2 = f"{build_target}/commands_receivable:{collection_version} "
+        docker_timestamp = subprocess.check_output(cmd1 + cmd2, shell=True,
+            universal_newlines=True)
+        docker_timestamp = docker_timestamp.replace('T', ' ').split('.')[0]
+    except subprocess.CalledProcessError as e:
+        # Hitting this means that we don't have an image like this built
+        print("Could not find any matching docker image...")
+        return True
+
+    git_proj_datetime = datetime.strptime(git_proj_timestamp,
+                                          '%Y-%m-%d %H:%M:%S')
+    git_coll_datetime = datetime.strptime(git_coll_timestamp,
+                                          '%Y-%m-%d %H:%M:%S')
+    docker_datetime = datetime.strptime(docker_timestamp, '%Y-%m-%d %H:%M:%S')
+
+    # Greater than (`>`) when comparing datetime objects means "newer than".
+    # So here we are testing if the git history has a commit that is newer
+    # than the time that the docker image was built. This means that we want to
+    # build a completely new container, and 
+    if (git_proj_datetime > docker_datetime or
+            git_coll_datetime > docker_datetime):
+        print("Found git date that is later than our docker image build date.")
+        return True
+
+    print("No need to bypass the cache. Project and Collection up-to-date.")
+    return False
 
 
 def build_command(spec):
@@ -89,14 +150,19 @@ def build_container_image(collection_version, build_target):
             "    ansible-galaxy install -fr requirements.yml\n"
             )
 
+    no_cache = get_no_cache(build_target, collection_version)
     client = docker.from_env()
+    # TODO: Use buildargs instead of f-string above?
+    print("Building container...")
     container_image = client.images.build(
             path='/tmp/docker_build',
             tag="{}/commands_receivable:{}".format(
                 build_target, collection_version),
             pull=True,
-            # TODO: buildargs instead of f-string above?
+            nocache = no_cache,
             )
+    for line in container_image[1]:
+        print(line)
 
     return container_image
 
@@ -202,6 +268,8 @@ def systemd_socket_response():
                     try:
                         while True:
                             line = next(container_logs)
+                            if line == b'\n':
+                                continue
                             print(line)
                             conn.send(line)
                     except StopIteration:
