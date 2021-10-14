@@ -13,6 +13,7 @@ compositional_services:
   - 'kanboard'
   - 'nextcloud'
   - 'rundeck'
+  - 'suitecrm'
   - 'wordpress'
 # Here we want to default to portal if it's being deployed.
 # Otherwise, just default to nill and have it redirect to the
@@ -350,3 +351,27 @@ compositional_portal_healthcheck: |
   wget --quiet --no-verbose --tries=1 --spider localhost:3000/portal \
   && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate proxy$$(wget --quiet --no-verbose --tries=1 localhost:3000/portal -O - | grep -oe "[A-Za-z0-9/_-]\+.css" | head -n 1 | sed 's/^{{ environment_domain.split(".")[-1] }}//') \
   || exit 1
+
+#
+# SuiteCRM
+#
+compositional_suitecrm_pull: yes
+compositional_suitecrm_state: present
+compositional_suitecrm_restarted: yes
+compositional_suitecrm_version: '7-debian-10'
+compositional_suitecrm_storage: 'local'
+compositional_suitecrm_admin_password: 'testpassword1234'
+compositional_suitecrm_backend_password: 'testpassword'
+compositional_suitecrm_bind_mountpoints:
+  - {location: '/suitecrm/themes/', directory: '/opt/bitnami/suitecrm/themes'}
+  - {location: '/suitecrm/include/', directory: '/opt/bitnami/suitecrm/include'}
+  - {location: '/suitecrm/vendor/', directory: '/opt/bitnami/suitecrm/vendor'}
+compositional_suitecrm_mysql_script: |
+  CREATE USER IF NOT EXISTS 'suitecrm'@'%' IDENTIFIED BY '{{ compositional_suitecrm_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS suitecrm;
+  GRANT ALL PRIVILEGES ON suitecrm.* TO 'suitecrm'@'%';
+compositional_suitecrm_healthcheck: |
+  curl -sSL --fail --insecure localhost:8080/suitecrm \
+  && curl -sSL --fail --insecure proxy/suitecrm/$$(curl -sSL --fail --insecure localhost:8000/suitecrm | grep -oe 'v1/css/suitecrm.css?v=[0-9.]\+') \
+  || exit 1
+
