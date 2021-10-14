@@ -59,7 +59,7 @@
     restarted: "{{ compositional_jekyll_restarted }}"
   register: compositional_jekyll_output
 
-- name: Wait for jekyll to build the site and start up the server
+- name: (jekyll) Wait for jekyll to build the site and start up the server
   shell: docker logs --since 6m jekyll | grep 'Server running...'
   register: compositional_jekyll_server_running
   until: compositional_jekyll_server_running['rc'] == 0
