@@ -6,6 +6,7 @@ compositional_frontend_service: 'nginx'
 compositional_backend_service: 'mariadb'
 compositional_database_root_password: 'testpassword'
 compositional_services:
+  - 'akaunting'
   - 'bitwarden'
   - 'bookstack'
   - 'commandcenter'
@@ -373,5 +374,31 @@ compositional_suitecrm_mysql_script: |
 compositional_suitecrm_healthcheck: |
   curl -sSL --fail --insecure localhost:8080/suitecrm \
   && curl -sSL --fail --insecure proxy/suitecrm/$$(curl -sSL --fail --insecure localhost:8000/suitecrm | grep -oe 'v1/css/suitecrm.css?v=[0-9.]\+') \
+  || exit 1
+
+# 
+# Akaunting
+# 
+compositional_akaunting_pull: yes
+compositional_akaunting_state: present
+compositional_akaunting_restarted: yes
+compositional_akaunting_version: '2.1.25'
+compositional_akaunting_storage: 'local'
+compositional_akaunting_backend_password: 'testpassword'
+compositional_akaunting_admin_email: "admin@{{ environment_domain }}"
+compositional_akaunting_admin_password: "testpassword"
+compositional_akaunting_bind_mountpoints:
+  - {location: '/akaunting/public/css/', directory: '/var/www/html/public/css'}
+  - {location: '/akaunting/public/files/', directory: '/var/www/html/public/files'}
+  - {location: '/akaunting/public/img/', directory: '/var/www/html/public/img'}
+  - {location: '/akaunting/public/vendor/', directory: '/var/www/html/public/vendor'}
+  - {location: '/akaunting/public/js/', directory: '/var/www/html/public/js'}
+compositional_akaunting_mysql_script: |
+  CREATE USER IF NOT EXISTS 'akaunting'@'%' IDENTIFIED BY '{{ compositional_akaunting_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS akaunting;
+  GRANT ALL PRIVILEGES ON akaunting.* TO 'akaunting'@'%' IDENTIFIED BY '{{ compositional_akaunting_backend_password }}';
+compositional_akaunting_healthcheck: |
+  wget --quiet --no-verbose --tries=1 --spider localhost:80 \
+  && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate proxy$$(wget --quiet --no-verbose --tries=1 localhost:3000/portal -O - | grep -oe "[A-Za-z0-9/_-]\+.css" | head -n 1 | sed 's/^{{ environment_domain.split(".")[-1] }}//') \
   || exit 1
 
