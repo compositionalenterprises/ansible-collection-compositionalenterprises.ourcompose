@@ -1,0 +1,97 @@
+---
+- name: (akaunting) Nginx conf is deployed
+  template:
+    src: "nginx_akaunting.conf.j2"
+    dest: "/srv/{{ compositional_nginx_storage }}/nginx_conf.d/{{ environment_domain }}/akaunting.conf"
+  notify: 'Restart Frontend'
+
+- name: (akaunting) The database service is up and initialized
+  shell: 'docker exec -i database bash -c "while mysql -uroot -p{{ compositional_database_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ compositional_no_log }}"
+
+- name: (akaunting) Set up the database
+  shell: docker exec -i database mysql -uroot -p{{ compositional_database_root_password }} <<< "{{ compositional_akaunting_mysql_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ compositional_no_log }}"
+
+- name: (akaunting) The accounting service is built and {{ compositional_akaunting_state }}
+  docker_compose:
+    project_name: akaunting
+    definition: 
+      version: '3.6'
+      services:
+          akaunting:
+              image: "akaunting/akaunting:{{ compositional_akaunting_version }}"
+              container_name: akaunting
+              restart: always
+              networks:
+                - frontend
+                - backend
+              environment:
+                DB_HOST: "database"
+                DB_DATABASE: "akaunting"
+                DB_USERNAME: "akaunting"
+                APP_URL: https://{{ environment_domain }}/akaunting
+                DB_PASSWORD: "{{ compositional_akaunting_backend_password }}"
+                ADMIN_EMAIL: "{{ compositional_akaunting_admin_email }}"
+                PASSWORD: "{{ compositional_akaunting_admin_password }}"
+      networks:
+          frontend:
+              external: true
+          backend:
+              external: true
+    pull: "{{ compositional_akaunting_pull }}"
+    state: "{{ compositional_akaunting_state }}"
+    restarted: "{{ compositional_akaunting_restarted }}"
+  register: compositional_akaunting_output_1
+  no_log: "{{ compositional_no_log }}"
+
+- name: (akaunting) Symlink akaunting directory
+  shell: docker exec -i akaunting bash -c "ln -snfT /var/www/html/ /var/www/html/akaunting"
+
+- name: (akaunting) Register the number of tables
+  shell: if [ $(docker exec -i database mysql -uroot -p{{ compositional_database_root_password }} <<< "select count(*) as totaltables from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=\"akaunting\"" | tail -n 1) -gt 5 ]; then echo "HasTables"; else echo "MissingTables"; fi
+  args: 
+    executable: '/bin/bash'
+  register: number_of_tables_status
+  no_log: "{{ compositional_no_log }}"
+
+- name: (akaunting) Configure Database
+  shell: docker exec -i akaunting php artisan install --db-host="database" --db-name="akaunting" --db-username="akaunting" --db-password="{{ compositional_akaunting_backend_password }}" --admin-email="{{ compositional_akaunting_admin_email }}" --admin-password="{{ compositional_akaunting_admin_password }}"
+  args: 
+    executable: '/bin/bash'
+  no_log: "{{ compositional_no_log }}"
+  when: number_of_tables_status.stdout == "MissingTables"
+
+- name: (akaunting) Change Storage Permissions
+  shell: docker exec -it akaunting chmod -R 777 /var/www/html/storage/
+  args: 
+    executable: '/bin/bash'
+  no_log: "{{ compositional_no_log }}"
+#
+# Bind Mountpoints
+#
+- name: (akaunting) Find source filesystem directory
+  shell: for i in $(docker inspect --format {% raw %}{{.GraphDriver.Data.LowerDir}}{% endraw %} akaunting | tr ':' ' '); do if [[ -d ${i}{{ item['directory'] }} ]]; then echo ${i}; fi; done | head -n 1
+  args:
+    executable: /bin/bash
+  when: not item['directory'].startswith('/srv')
+  loop: "{{ compositional_akaunting_bind_mountpoints }}"
+  register: compositional_akaunting_src_dirs
+
+- name: (akaunting) Register akaunting non-volume bind-mountpoints for proxy
+  set_fact:
+    compositional_proxy_bind_mountpoints: "{{ compositional_proxy_bind_mountpoints + [{'location': item['item']['location'], 'directory': item['stdout'] + item['item']['directory']}] }}"
+  when: not item['item']['directory'].startswith('/srv')
+  loop: "{{ compositional_akaunting_src_dirs['results'] }}"
+
+- name: (akaunting) Register akaunting volume bind-mountpoints for proxy
+  set_fact:
+    compositional_proxy_bind_mountpoints: "{{ compositional_proxy_bind_mountpoints + [item] }}"
+  when: item['directory'].startswith('/srv')
+  loop: "{{ compositional_akaunting_bind_mountpoints }}"
+
+- name: (akaunting) Reset the bind mountpoints in order to get akaunting healthy
+  include_tasks: ./bind_mountpoints.yml
+
