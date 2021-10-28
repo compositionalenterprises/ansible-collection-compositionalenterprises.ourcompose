@@ -4,15 +4,6 @@
     ansible_python_interpreter: "/usr/bin/env python3"
   when: ansible_python_interpreter is not defined
 
-- name: Install necessary packages
-  apt:
-    name: "{{ pkgs }}"
-    state: latest
-  vars:
-    pkgs:
-      - build-essential
-      - libsystemd-dev
-
 - name: Ensure that the local and remote directories are configured
   file:
     path: "/srv/{{ item }}"

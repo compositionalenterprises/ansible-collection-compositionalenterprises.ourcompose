@@ -134,7 +134,6 @@ There are several variables that are typical of all of the services using that p
 
 - [pull](https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html#parameter-pull)
 - [state](https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html#parameter-state)
-- [restarted](https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html#parameter-restarted)
 
 There are two others that are specific to this role:
 

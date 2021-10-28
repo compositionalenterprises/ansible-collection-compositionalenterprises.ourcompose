@@ -45,6 +45,12 @@
     - 'production.key'
     - 'production.yml.enc'
 
+- name: (commandcenter) Determine whether the commandcenter service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep commandcenter
+  failed_when: False
+  register: compositional_commandcenter_existing
+
 - name: Deploy Container
   block:
     - name: (commandcenter) The commandcenter service version {{ compositional_commandcenter_version }} is built and {{ compositional_commandcenter_state }}
@@ -85,8 +91,11 @@
 
         pull: "{{ compositional_commandcenter_pull }}"
         state: "{{ compositional_commandcenter_state }}"
-        restarted: "{{ compositional_commandcenter_restarted }}"
+        # If the container is not already present, we don't want to pass
+        # the 'restarted' parameter, we just want it restarted regularly.
+        restarted: "{{ not compositional_commandcenter_existing['rc'] }}"
       register: compositional_commandcenter_output
+      timeout: 200
       no_log: "{{ compositional_no_log }}"
 
   rescue:
@@ -131,7 +140,10 @@
 
         pull: "{{ compositional_commandcenter_pull }}"
         state: "{{ compositional_commandcenter_state }}"
-        restarted: "{{ compositional_commandcenter_restarted }}"
+        # If the container is not already present, we don't want to pass
+        # the 'restarted' parameter, we just want it restarted regularly.
+        restarted: "{{ not compositional_commandcenter_existing['rc'] }}"
+        timeout: 200
       register: compositional_commandcenter_output
       no_log: "{{ compositional_no_log }}"
 

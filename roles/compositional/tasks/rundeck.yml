@@ -30,6 +30,12 @@
     executable: '/bin/bash'
   no_log: "{{ compositional_no_log }}"
 
+- name: (rundeck) Determine whether the rundeck service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep rundeck
+  failed_when: False
+  register: compositional_rundeck_existing
+
 - name: (rundeck) The latest rundeck service is built and {{ compositional_rundeck_state }}
   docker_compose:
     project_name: rundeck
@@ -73,6 +79,10 @@
               external: true
     pull: "{{ compositional_rundeck_pull }}"
     state: "{{ compositional_rundeck_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not compositional_rundeck_existing['rc'] }}"
+    timeout: 200
   register: compositional_rundeck_output
 
 - name: (rundeck) Run additional setup commands in rundeck container

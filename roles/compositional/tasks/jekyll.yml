@@ -19,6 +19,12 @@
     dest: '/srv/{{ compositional_jekyll_storage }}/jekyll_jekyll/entrypoint.sh'
     mode: '0555'
 
+- name: (jekyll) Determine whether the jekyll service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep jekyll
+  failed_when: False
+  register: compositional_jekyll_existing
+
 - name: (jekyll) The latest jekyll service is built and {{ compositional_jekyll_state }}
   docker_compose:
     project_name: jekyll
@@ -56,7 +62,10 @@
               external: true
     pull: "{{ compositional_jekyll_pull }}"
     state: "{{ compositional_jekyll_state }}"
-    restarted: "{{ compositional_jekyll_restarted }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not compositional_jekyll_existing['rc'] }}"
+    timeout: 200
   register: compositional_jekyll_output
 
 - name: (jekyll) Wait for jekyll to build the site and start up the server
