@@ -18,6 +18,12 @@
     executable: '/bin/bash'
   no_log: "{{ compositional_no_log }}"
 
+- name: (nextcloud) Determine whether the nextcloud service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep nextcloud
+  failed_when: False
+  register: compositional_nextcloud_existing
+
 - name: (nextcloud) The nextcloud service is built and {{ compositional_nextcloud_state }}
   docker_compose:
     project_name: nextcloud
@@ -56,7 +62,10 @@
               external: true
     pull: "{{ compositional_nextcloud_pull }}"
     state: "{{ compositional_nextcloud_state }}"
-    restarted: "{{ compositional_nextcloud_restarted }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not compositional_nextcloud_existing['rc'] }}"
+    timeout: 200
   register: compositional_nextcloud_output_1
   no_log: "{{ compositional_no_log }}"
 

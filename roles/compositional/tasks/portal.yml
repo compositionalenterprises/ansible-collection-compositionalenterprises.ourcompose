@@ -88,6 +88,12 @@
     - 'production.key'
     - 'production.yml.enc'
 
+- name: (portal) Determine whether the portal service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep portal
+  failed_when: False
+  register: compositional_portal_existing
+
 - name: Deploy Container
   block:
     - name: (portal) The latest portal service is built and {{ compositional_portal_state }}
@@ -138,7 +144,10 @@
                   external: true
         pull: "{{ compositional_portal_pull }}"
         state: "{{ compositional_portal_state }}"
-        restarted: "{{ compositional_portal_restarted }}"
+        # If the container is not already present, we don't want to pass
+        # the 'restarted' parameter, we just want it restarted regularly.
+        restarted: "{{ not compositional_portal_existing['rc'] }}"
+        timeout: 200
       register: compositional_portal_output
       no_log: "{{ compositional_no_log }}"
   rescue:
@@ -193,8 +202,11 @@
                   external: true
         pull: "{{ compositional_portal_pull }}"
         state: "{{ compositional_portal_state }}"
-        restarted: "{{ compositional_portal_restarted }}"
+        # If the container is not already present, we don't want to pass
+        # the 'restarted' parameter, we just want it restarted regularly.
+        restarted: "{{ not compositional_portal_existing['rc'] }}"
       register: compositional_portal_output
+      timeout: 200
       no_log: "{{ compositional_no_log }}"
 
 - name: (portal) The portal cron job for health checks

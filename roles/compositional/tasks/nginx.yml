@@ -1,4 +1,10 @@
 ---
+- name: (nginx) Determine whether the nginx service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep nginx
+  failed_when: False
+  register: compositional_nginx_existing
+
 - name: (nginx) The latest nginx service is built and present
   docker_compose:
     project_name: nginx
@@ -29,7 +35,10 @@
               name: frontend
     pull: "{{ compositional_nginx_pull }}"
     state: "{{ compositional_nginx_state }}"
-    restarted: "{{ compositional_nginx_restarted }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not compositional_nginx_existing['rc'] }}"
+    timeout: 200
   register: frontend_output
 
 - name: (nginx) Check for domain redirects' certs

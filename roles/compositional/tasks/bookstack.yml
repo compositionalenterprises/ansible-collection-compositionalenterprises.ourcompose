@@ -29,6 +29,12 @@
     - 'uploads'
     - 'storage'
 
+- name: (bookstack) Determine whether the bookstack service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep bookstack
+  failed_when: False
+  register: compositional_bookstack_existing
+
 - name: (bookstack) The latest bookstack service is built and {{ compositional_bookstack_state }}
   docker_compose:
     project_name: bookstack
@@ -68,7 +74,10 @@
         nginx:
     pull: "{{ compositional_bookstack_pull }}"
     state: "{{ compositional_bookstack_state }}"
-    restarted: "{{ compositional_bookstack_restarted }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not compositional_bookstack_existing['rc'] }}"
+    timeout: 200
   register: compositional_bookstack_output
   no_log: "{{ compositional_no_log }}"
 

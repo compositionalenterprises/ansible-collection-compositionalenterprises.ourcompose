@@ -59,7 +59,6 @@ compositional_proxy_html_dir: '/usr/share/nginx/html'
 #
 compositional_nginx_pull: 'yes'
 compositional_nginx_state: 'present'
-compositional_nginx_restarted: no
 compositional_nginx_version: '1.17'
 compositional_nginx_storage: 'local'
 # TODO: Set these in project
@@ -79,7 +78,6 @@ compositional_nginx_healthcheck: |
 #
 compositional_mariadb_pull: 'yes'
 compositional_mariadb_state: 'present'
-compositional_mariadb_restarted: yes
 compositional_mariadb_version: '10.5'
 compositional_mariadb_storage: 'local'
 compositional_mariadb_healthcheck: |
@@ -91,7 +89,6 @@ compositional_mariadb_healthcheck: |
 #
 compositional_kanboard_pull: yes
 compositional_kanboard_state: present
-compositional_kanboard_restarted: yes
 compositional_kanboard_version: 'v1.2.19'
 compositional_kanboard_storage: 'local'
 compositional_kanboard_admin_password: 'testpassword'
@@ -113,7 +110,6 @@ compositional_kanboard_healthcheck: |
 #
 compositional_nextcloud_pull: yes
 compositional_nextcloud_state: present
-compositional_nextcloud_restarted: yes
 compositional_nextcloud_version: '21'
 compositional_nextcloud_storage: 'local'
 compositional_nextcloud_backend_password: 'testpassword'
@@ -137,7 +133,6 @@ compositional_nextcloud_bind_mountpoints:
 #
 compositional_wordpress_pull: yes
 compositional_wordpress_state: present
-compositional_wordpress_restarted: yes
 compositional_wordpress_version: '5.7'
 compositional_wordpress_storage: 'local'
 compositional_wordpress_title: 'Wordpress Blog'
@@ -156,7 +151,6 @@ compositional_wordpress_healthcheck: |
 #
 compositional_bitwarden_pull: yes
 compositional_bitwarden_state: present
-compositional_bitwarden_restarted: yes
 compositional_bitwarden_version: '1.21.0'
 compositional_bitwarden_storage: 'local'
 compositional_bitwarden_admin_password: 'testpassword'
@@ -178,7 +172,6 @@ compositional_bitwarden_healthcheck: |
 #
 compositional_firefly_pull: yes
 compositional_firefly_state: present
-compositional_firefly_restarted: yes
 compositional_firefly_version: 'version-5.5.13'
 compositional_firefly_storage: 'local'
 compositional_firefly_admin_password: 'testpassword1234'
@@ -206,7 +199,6 @@ compositional_firefly_healthcheck: |
 # This value has to be exactly 32 characters, it is the encryption key for your database and sessions
 compositional_jekyll_pull: yes
 compositional_jekyll_state: present
-compositional_jekyll_restarted: yes
 compositional_jekyll_version: '4.1.0'
 compositional_jekyll_storage: 'local'
 compositional_jekyll_port: '8080'
@@ -253,7 +245,6 @@ compositional_jekyll_healthcheck: |
 #
 compositional_rundeck_pull: yes
 compositional_rundeck_state: present
-compositional_rundeck_restarted: yes
 compositional_rundeck_version: '3.3.14'
 compositional_rundeck_storage: 'local'
 compositional_rundeck_admin_password: 'testpassword'
@@ -278,7 +269,6 @@ compositional_rundeck_healthcheck: |
 #
 compositional_bookstack_pull: yes
 compositional_bookstack_state: present
-compositional_bookstack_restarted: yes
 compositional_bookstack_version: '0.30'
 compositional_bookstack_storage: 'local'
 compositional_bookstack_backend_password: 'testpassword'
@@ -300,7 +290,6 @@ compositional_bookstack_healthcheck: |
 #
 compositional_commandcenter_pull: yes
 compositional_commandcenter_state: present
-compositional_commandcenter_restarted: yes
 compositional_commandcenter_version: '1.12.2'
 compositional_commandcenter_storage: 'local'
 compositional_commandcenter_production_key: '5c9aceffa60041f9bd646287bce1cc72'
@@ -322,7 +311,6 @@ compositional_commandcenter_healthcheck: |
 #
 compositional_portal_pull: yes
 compositional_portal_state: present
-compositional_portal_restarted: yes
 compositional_portal_version: '1.9.6'
 compositional_portal_storage: 'local'
 compositional_portal_role_branch: 'master'
@@ -358,7 +346,6 @@ compositional_portal_healthcheck: |
 #
 compositional_suitecrm_pull: yes
 compositional_suitecrm_state: present
-compositional_suitecrm_restarted: yes
 compositional_suitecrm_version: '7-debian-10'
 compositional_suitecrm_storage: 'local'
 compositional_suitecrm_admin_password: 'testpassword1234'
@@ -381,7 +368,6 @@ compositional_suitecrm_healthcheck: |
 # 
 compositional_akaunting_pull: yes
 compositional_akaunting_state: present
-compositional_akaunting_restarted: yes
 compositional_akaunting_version: '2.1.25'
 compositional_akaunting_storage: 'local'
 compositional_akaunting_backend_password: 'testpassword'
@@ -402,3 +388,15 @@ compositional_akaunting_healthcheck: |
   && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate proxy$$(wget --quiet --no-verbose --tries=1 localhost:3000/portal -O - | grep -oe "[A-Za-z0-9/_-]\+.css" | head -n 1 | sed 's/^{{ environment_domain.split(".")[-1] }}//') \
   || exit 1
 
+# 
+# Bitcoind
+# 
+compositional_bitcoind_pull: yes
+compositional_bitcoind_state: present
+compositional_bitcoind_version: '1.9.1.1'
+compositional_bitcoind_storage: 'local'
+# change to 18333 if running testnet
+compositional_bitcoind_ports: '8333:8333'
+compositional_bitcoind_admin_password: "testpassword"
+compositional_bitcoind_healthcheck: |
+  /entrypoint.sh bitcoin-cli getblockchaininfo
