@@ -14,7 +14,7 @@
 
 - name: (bind_mountpoints) Get filesystem mountpoints device numbers
   # The trailing space is intentional
-  shell: set -o pipefail && cat /proc/self/mountinfo | grep '{{ item }} ' | awk '{print $3}'
+  shell: set -o pipefail && cat /proc/self/mountinfo | grep '{{ item }} ' | awk '{print $3}' | sort -u
   args:
     executable: /bin/bash
   loop: "{{ host_filesystem_mountpoints['results'] | map(attribute='stdout') | list | unique }}"
