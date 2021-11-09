@@ -75,9 +75,9 @@ You should now be able to access that host at the DNS name or IP address that wa
 
 ## SSL Certificates
 
-This role assumes that the SSL cert is set up somewhere on the server where docker can mount it as a volume to wherever inside of the proxy container it needs to go.
-By default it creates its own self-signed certificates.
-However, those can be overridden by setting the following variables, shown here set up for Let's Encrypt:
+By default this role creates its own self-signed certificates.
+It allows for SSL certs to be set up somewhere on the server where docker can mount it as a volume to wherever inside of the proxy container it needs to go.
+Those can be configured by setting the following variables, shown here set up for Let's Encrypt:
 
 ```yaml
 compositional_nginx_cert_volume: '/etc/letsencrypt:/etc/letsencrypt'
@@ -107,13 +107,17 @@ compositional_database_root_password: 'testpassword'
 # You'll probably want to override this with a subset
 # of only the services that you want installed.
 compositional_services:
+  - 'akaunting'
+  - 'bitcoind'
   - 'bitwarden'
   - 'bookstack'
   - 'commandcenter'
+  - 'dolibarr'
   - 'firefly'
   - 'kanboard'
   - 'nextcloud'
   - 'rundeck'
+  - 'suitecrm'
   - 'wordpress'
 ```
 
@@ -123,6 +127,8 @@ compositional_services:
 # The domain that will be pointing to the server's IP
 environment_domain: 'example.com'
 ```
+
+#### NOTE: This will default to the inventory hostname that is used in the ansible-playbook run.
 
 ## Services
 
@@ -211,6 +217,14 @@ This should probably be vaulted, but as they are by default, you will be able to
 
 See the [CommandCenter Repo - Passing Production Keys](https://gitlab.com/compositionalenterprises/commandcenter/-/blob/master/docs/INSTALL.md#pass-production-keys-to-the-container-in-volumes-when-running-in-production) for more information on updating rails credentials files. Please also note with the default keys setup we run, the keys can be updated from a commandline interface within the container using `EDITOR=vim RAILS_ENV=production rails credentials:edit -e production`
 
+### Dolibar
+
+The modules that are loaded up are passed via the following variable:
+
+- `compositional_dolibarr_modules`
+
+This can be any one of the modules available to dolibarr, found [here](https://doxygen.dolibarr.org/develop/modules.html).
+
 # New Services
 
 Whenever new services are added, we should make sure they are doing the same things that the other ones are.
@@ -225,11 +239,22 @@ New services should include the following setup steps:
 - NGINX Configuration Template
 - Database initialization check
 - Database setup script
+- Existing containter check
 - `docker_compose` setup
 - Bind Mountpoints
-- Script Execution (Coming Soon)
-- Default Login Account (Coming Later)
+- Admin setup
+- Default Login Account (Coming Soon)
+- Script Execution (Coming Later)
 - Unified Account Management (Coming Much Later)
+
+Then after a working service is configured, the rest of the ecosystem needs updating:
+
+- User Admin in [Project](https://gitlab.com/compositionalenterprises/ansible-project-ourcompose_management)
+- Add new book into [Bookstack Docs](https://compositionalenterprises.ourcompose.com/bookstack/)
+- Add entry into [Portal](https://gitlab.com/compositionalenterprises/portal)
+- Add entry into [CommandCenter](https://gitlab.com/compositionalenterprises/commandcenter)
+- Add entry into `common.py` in [Project](https://gitlab.com/compositionalenterprises/ansible-project-ourcompose_management)
+- Update this README.md
 
 ## Requirements
 
