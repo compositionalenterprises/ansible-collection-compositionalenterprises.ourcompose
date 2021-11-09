@@ -348,7 +348,7 @@ compositional_suitecrm_pull: yes
 compositional_suitecrm_state: present
 compositional_suitecrm_version: '7-debian-10'
 compositional_suitecrm_storage: 'local'
-compositional_suitecrm_admin_password: 'testpassword1234'
+compositional_suitecrm_admin_password: 'testpassword'
 compositional_suitecrm_backend_password: 'testpassword'
 compositional_suitecrm_bind_mountpoints:
   - {location: '/suitecrm/themes/', directory: '/opt/bitnami/suitecrm/themes'}
@@ -400,3 +400,26 @@ compositional_bitcoind_ports: '8333:8333'
 compositional_bitcoind_admin_password: "testpassword"
 compositional_bitcoind_healthcheck: |
   /entrypoint.sh bitcoin-cli getblockchaininfo
+
+#
+# Dolibarr
+# 
+compositional_dolibarr_pull: yes
+compositional_dolibarr_state: present
+compositional_dolibarr_version: '13.0'
+compositional_dolibarr_storage: 'local'
+compositional_dolibarr_backend_password: 'testpassword'
+compositional_dolibarr_admin_password: "testpassword"
+compositional_dolibarr_admin_api_key: "testtesttesttesttesttesttesttest"
+compositional_dolibarr_modules: "modSociete,modPropale,modFournisseur,modContrat,modApi"
+compositional_dolibarr_bind_mountpoints:
+  - {location: '/dolibarr/includes/', directory: '/usr/src/dolibarr/htdocs/includes'}
+  - {location: '/dolibarr/theme/common', directory: '/usr/src/dolibarr/htdocs/theme/common'}
+  - {location: '/dolibarr/public/theme/', directory: '/usr/src/dolibarr/htdocs/public/theme'}
+compositional_dolibarr_mysql_script: |
+  CREATE USER IF NOT EXISTS 'dolibarr'@'%' IDENTIFIED BY '{{ compositional_dolibarr_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS dolibarr;
+  GRANT ALL PRIVILEGES ON dolibarr.* TO 'dolibarr'@'%' IDENTIFIED BY '{{ compositional_dolibarr_backend_password }}';
+compositional_dolibarr_healthcheck: |
+  wget --quiet --no-verbose --tries=1 --spider localhost:80 \
+  || exit 1
