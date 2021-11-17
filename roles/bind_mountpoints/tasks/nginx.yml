@@ -1,0 +1,76 @@
+---
+- name: (nginx) Find source filesystem directories for non-volume bind mountpoints
+  shell: for i in $(docker inspect --format {% raw %}{{.GraphDriver.Data.LowerDir}}{% endraw %} {{ ourcompose_bind_mountpoints_container }} | tr ':' ' '); do if [[ -d ${i}{{ item['directory'] }} ]]; then echo ${i}; fi; done | head -n 1
+  args:
+    executable: /bin/bash
+  when: not item['directory'].startswith('/srv')
+  loop: "{{ ourcompose_bind_mountpoints_mountpoints }}"
+  register: ourcompose_bind_mountpoints_src_dirs
+
+- name: (nginx) Register non-volume bind mountpoints
+  set_fact:
+    ourcompose_bind_mountpoints_mounts: "{{ [{'location': item['item']['location'], 'directory': item['stdout'] + item['item']['directory']}] }}"
+  when: not item['item']['directory'].startswith('/srv')
+  loop: "{{ ourcompose_bind_mountpoints_src_dirs['results'] }}"
+
+- name: (nginx) Register volume bind mountpoints
+  set_fact:
+    ourcompose_bind_mountpoints_mounts: "{{ ourcompose_bind_mountpoints_mounts + [item] }}"
+  when: item['directory'].startswith('/srv')
+  loop: "{{ ourcompose_bind_mountpoints_mountpoints }}"
+
+- name: (nginx) Get block-type device nodes present
+  shell: docker exec -i nginx bash -c "find /dev/ -type b"
+  register: ourcompose_bind_mountpoints_device_nodes
+
+- name: (nginx) Get mountpoint of bind_mountpoint on host filesystem
+  shell: set -o pipefail && df {{ item['directory'] }} | sed -e 1d | awk '{ print $1 }'
+  args:
+    executable: /bin/bash
+  loop: "{{ ourcompose_bind_mountpoints_mounts }}"
+  register: host_filesystem_mountpoints
+
+- name: (nginx) Get filesystem mountpoints device numbers
+  # The trailing space is intentional
+  shell: set -o pipefail && cat /proc/self/mountinfo | grep '{{ item }} ' | awk '{print $3}' | sort -u
+  args:
+    executable: /bin/bash
+  loop: "{{ host_filesystem_mountpoints['results'] | map(attribute='stdout') | list | unique }}"
+  register: host_filesystem_mountpoints_numbers
+
+- name: (nginx) Get the nginx container's PID
+  command: docker inspect --format {% raw %}{{.State.Pid}}{% endraw %} nginx
+  register: ourcompose_bind_mountpoints_nginx_container_pid
+
+- name: (nginx) Make the directory parents to mount within
+  command: "nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mkdir -p {{ item['item'].split('/')[:-1] | join('/') }}"
+  loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
+
+- name: (nginx) Make device nodes in the nginx container
+  command: "nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mknod --mode 0600 {{ item['item'] }} b {{ item['stdout'].split(':')[0] }} {{ item['stdout'].split(':')[1] }}"
+  when: item['item'] not in ourcompose_bind_mountpoints_device_nodes['stdout_lines']
+  loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
+
+- name: (nginx) Make temporary mountpoints for the host filesystems
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mkdir -p /tmp/{{ item['item'].split('/')[-1] }}
+  loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
+
+- name: (nginx) Mount the host filesystems on the temporary mountpoints
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mount {{ item['item'] }} /tmp/{{ item['item'].split('/')[-1] }}
+  loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
+
+- name: (nginx) Make mountpoints in local nginx html directory
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mkdir -p {{ ourcompose_nginx_html_dir }}{{ item['item']['location'] }}
+  loop: "{{ host_filesystem_mountpoints['results'] }}"
+
+- name: (nginx) Bind-mount the subdirectories onto the mountpoints in the local nginx html directory
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mount --bind /tmp/{{ item['stdout'].split('/')[-1] }}{{ item['item']['directory'] }} {{ ourcompose_nginx_html_dir }}{{ item['item']['location'] }}
+  loop: "{{ host_filesystem_mountpoints['results'] }}"
+
+- name: (nginx) Unmount the host filesystems on the temporary mountpoints
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- umount /tmp/{{ item['item'].split('/')[-1] }}
+  loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
+
+- name: (nginx) Reload nginx container
+  shell:
+    cmd: docker exec -i nginx nginx -s reload

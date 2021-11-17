@@ -1,0 +1,20 @@
+---
+ourcompose_dolibarr_pull: yes
+ourcompose_dolibarr_state: present
+ourcompose_dolibarr_version: '13.0'
+ourcompose_dolibarr_storage: 'local'
+ourcompose_dolibarr_backend_password: 'testpassword'
+ourcompose_dolibarr_admin_password: "testpassword"
+ourcompose_dolibarr_admin_api_key: "testtesttesttesttesttesttesttest"
+ourcompose_dolibarr_modules: "modSociete,modPropale,modFournisseur,modContrat,modApi"
+ourcompose_dolibarr_bind_mountpoints:
+  - {location: '/dolibarr/includes/', directory: '/usr/src/dolibarr/htdocs/includes'}
+  - {location: '/dolibarr/theme/common', directory: '/usr/src/dolibarr/htdocs/theme/common'}
+  - {location: '/dolibarr/public/theme/', directory: '/usr/src/dolibarr/htdocs/public/theme'}
+ourcompose_dolibarr_mariadb_script: |
+  CREATE USER IF NOT EXISTS 'dolibarr'@'%' IDENTIFIED BY '{{ ourcompose_dolibarr_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS dolibarr;
+  GRANT ALL PRIVILEGES ON dolibarr.* TO 'dolibarr'@'%' IDENTIFIED BY '{{ ourcompose_dolibarr_backend_password }}';
+ourcompose_dolibarr_healthcheck: |
+  wget --quiet --no-verbose --tries=1 --spider localhost:80 \
+  || exit 1

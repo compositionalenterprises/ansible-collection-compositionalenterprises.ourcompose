@@ -1,0 +1,40 @@
+---
+- name: Use python3 if we haven't already set a custom interpreter
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/env python3"
+  when: ansible_python_interpreter is not defined
+
+- name: Ensure that the local and remote directories are configured
+  file:
+    path: "/srv/{{ item }}"
+    recurse: yes
+    state: directory
+  loop:
+    - 'local'
+    - 'remote'
+
+- name: Set up PATH environment in the crontab
+  cron:
+    name: PATH
+    env: yes
+    job: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'
+
+- name: Set up default openssl certs
+  when: ourcompose_common_cert_privkey == '/usr/local/share/certs/privkey.pem'
+  block:
+    - name: Create the certs directory
+      file:
+        path: "{{ ourcompose_common_cert_privkey | dirname }}"
+        recurse: True
+        state: directory
+
+    - name: Create the cert files
+      shell:
+        cmd: openssl req -newkey rsa:2048 -new -x509 -days 3650 -passout 'pass:{{ ourcompose_common_cert_password }}' -subj '/CN={{ inventory_hostname }}' -keyout {{ ourcompose_common_cert_privkey }} -out {{ ourcompose_common_cert_fullchain }}
+        creates: "{{ ourcompose_common_cert_privkey }}"
+      register: ourcompose_common_create_cert_files
+
+    - name: Unencrypt the keyfile
+      shell:
+        cmd: openssl rsa -passin 'pass:{{ ourcompose_common_cert_password }}' -in {{ ourcompose_common_cert_privkey }} -out {{ ourcompose_common_cert_privkey }}
+      when: ourcompose_common_create_cert_files['changed']

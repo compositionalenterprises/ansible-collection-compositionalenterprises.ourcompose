@@ -1,0 +1,18 @@
+---
+ourcompose_bookstack_pull: yes
+ourcompose_bookstack_state: present
+ourcompose_bookstack_version: '0.30'
+ourcompose_bookstack_storage: 'local'
+ourcompose_bookstack_backend_password: 'testpassword'
+ourcompose_bookstack_admin_password: 'testpassword'
+ourcompose_bookstack_bind_mountpoints:
+  - {location: '/bookstack/dist/', directory: '/var/www/bookstack/public/dist'}
+  - {location: '/bookstack/uploads/', directory: '/srv/{{ ourcompose_bookstack_storage }}/bookstack_uploads'}
+ourcompose_bookstack_mariadb_script: |
+  CREATE USER IF NOT EXISTS 'bookstack'@'%' IDENTIFIED BY '{{ ourcompose_bookstack_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS bookstack;
+  GRANT ALL PRIVILEGES ON bookstack.* TO 'bookstack'@'%';
+ourcompose_bookstack_healthcheck: |
+  curl -sSL --fail --insecure localhost:8080 \
+  && curl -sSL --fail -o - "nginx/bookstack/logo.png" &>/dev/null \
+  || exit 1

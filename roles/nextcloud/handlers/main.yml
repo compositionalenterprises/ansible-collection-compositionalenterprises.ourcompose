@@ -1,0 +1,4 @@
+- name: Restart Nextcloud
+  shell:
+    cmd: docker restart nextcloud
+  listen: restart_nextcloud

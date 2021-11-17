@@ -1,0 +1,148 @@
+---
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_rundeck.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/rundeck.conf"
+
+- name: (present) Persistant storage directories are provisioned
+  file:
+    path: "{{ item }}"
+    owner: 1000
+    group: 1000
+    state: directory
+  loop:
+    - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_data"
+    - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_config"
+    - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_logs"
+    - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_etc"
+
+- name: (present) The mariadb database service is up and initialized
+  # We're running a while loop to check to ensure that the mariadb database has
+  # initialized:
+  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the mariadb database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_rundeck_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Determine whether the rundeck service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep rundeck
+  failed_when: False
+  register: ourcompose_rundeck_existing
+
+- name: (present) The latest rundeck service is built and {{ ourcompose_rundeck_state }}
+  docker_compose:
+    project_name: rundeck
+    definition:
+      version: '3.6'
+      services:
+          rundeck:
+              image: "rundeck/rundeck:{{ ourcompose_rundeck_version }}"
+              container_name: rundeck
+              restart: always
+              volumes:
+                  - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_data:/home/rundeck/server/data"
+                  - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_config:/home/rundeck/server/config"
+                  - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_logs:/home/rundeck/var/logs"
+                  - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_etc:/home/rundeck/etc"
+
+              networks:
+                  - frontend
+                  - backend
+
+              environment:
+                RUNDECK_GRAILS_URL: "https://{{ ourcompose_common_domain }}/rundeck"
+                RUNDECK_SERVER_FORWARDED: 'true'
+                RUNDECK_SERVER_CONTEXTPATH: '/rundeck'
+                RUNDECK_DATABASE_DRIVER: 'org.mariadb.jdbc.Driver'
+                RUNDECK_DATABASE_USERNAME: 'rundeck'
+                RUNDECK_DATABASE_PASSWORD: "{{ ourcompose_rundeck_backend_password }}"
+                RUNDECK_DATABASE_URL: 'jdbc:mysql://mariadb/rundeck?autoReconnect=true&useSSL=false'
+                RUNDECK_API_TOKENS_DURATION_MAX: "{{ ourcompose_rundeck_api_tokens_duration_max }}"
+
+              healthcheck:
+                test: "{{ ourcompose_rundeck_healthcheck }}"
+                interval: 5s
+                timeout: 30s
+                retries: 3
+
+      networks:
+          frontend:
+              external: true
+          backend:
+              external: true
+    pull: "{{ ourcompose_rundeck_pull }}"
+    state: "{{ ourcompose_rundeck_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_rundeck_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_rundeck_output
+
+- name: (present) Run additional setup commands in rundeck container
+  shell: docker exec -u 0 -i rundeck bash -c "{{ ourcompose_rundeck_additional_setup }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+#
+# Workaround for https://github.com/rundeck/rundeck/issues/5344
+#
+- name: (present) Register presence of property files
+  stat:
+    path: "/srv/{{ ourcompose_rundeck_storage }}/rundeck_{{ item.split('/')[0] }}/{{ item.split('/')[1] }}"
+  loop:
+    - 'config/ssl.properties'
+    - 'config/realm.properties'
+    - 'etc/admin.aclpolicy'
+    - 'etc/apitoken.aclpolicy'
+    - 'etc/cli-log4j.properties'
+    - 'etc/preferences.properties'
+    - 'etc/profile'
+    - 'etc/profile.bat'
+    - 'etc/project.properties'
+  register: ourcompose_rundeck_property_files
+
+- name: (present) Copy initial property files to server
+  copy:
+    src: "../files/rundeck_{{ item['item'].split('/')[1] }}"
+    dest: "/srv/{{ ourcompose_rundeck_storage }}/rundeck_{{ item['item'].split('/')[0] }}/{{ item['item'].split('/')[1] }}"
+    owner: 1000
+    group: root
+    mode: '0775'
+  when: not item['stat']['exists']
+  loop: "{{ ourcompose_rundeck_property_files['results'] }}"
+
+#
+# Bind Mountpoints
+#
+- name: (present) Install unzip in rundeck container
+  shell: docker exec -u 0 -i rundeck bash -c "apt update && apt install unzip"
+  args:
+    executable: '/bin/bash'
+
+- name: (present) Unzip assets directory from the rundeck WAR file
+  shell: docker exec -i rundeck bash -c "unzip -o rundeck.war 'assets/*'"
+  args:
+    executable: '/bin/bash'
+
+- name: (present) Reset the bind mountpoints in order to get Kanboard healthy
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.bind_mountpoints
+  vars:
+    ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_rundeck_bind_mountpoints }}"
+    ourcompose_bind_mountpoints_container: 'rundeck'
+
+#
+# Admin Password
+#
+- name: (present) Set admin password in realm.properties
+  lineinfile:
+    line: 'admin:{{ ourcompose_rundeck_admin_password }},user,admin'
+    path: "/srv/{{ ourcompose_rundeck_storage }}/rundeck_config/realm.properties"
+    regexp: '^admin:'

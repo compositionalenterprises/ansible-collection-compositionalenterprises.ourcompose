@@ -1,0 +1,20 @@
+---
+ourcompose_nextcloud_pull: yes
+ourcompose_nextcloud_state: present
+ourcompose_nextcloud_version: '21'
+ourcompose_nextcloud_storage: 'local'
+ourcompose_nextcloud_backend_password: 'testpassword'
+ourcompose_nextcloud_mariadb_script: |
+  CREATE USER IF NOT EXISTS 'nextcloud'@'%' IDENTIFIED BY '{{ ourcompose_nextcloud_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS nextcloud;
+  GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'%' IDENTIFIED BY '{{ ourcompose_nextcloud_backend_password }}';
+  FLUSH privileges;
+ourcompose_nextcloud_admin_user: 'admin'
+ourcompose_nextcloud_admin_password: 'testpassword'
+ourcompose_nextcloud_legacy_dbtableprefix: False
+ourcompose_nextcloud_healthcheck: |
+  curl -sSL --fail localhost/status.php \
+  || exit 1
+ourcompose_nextcloud_bind_mountpoints:
+  - {location: '/nextcloud/core/', directory: '/usr/src/nextcloud/core'}
+  - {location: '/nextcloud/apps/', directory: '/usr/src/nextcloud/apps'}

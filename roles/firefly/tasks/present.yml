@@ -1,0 +1,118 @@
+---
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_firefly.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/firefly.conf"
+
+- name: (present) The mariadb database service is up and initialized
+  # We're running a while loop to check to ensure that the mariadb database has
+  # initialized:
+  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_common_database_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the mariadb database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_firefly_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Determine whether the firefly service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep firefly
+  failed_when: False
+  register: ourcompose_firefly_existing
+
+- name: (present) The latest firefly service is built and {{ ourcompose_firefly_state }}
+  docker_compose:
+    project_name: firefly
+    definition:
+      version: '3.6'
+      services:
+        firefly:
+          image: "fireflyiii/core:{{ ourcompose_firefly_version }}"
+          container_name: firefly
+          restart: always
+          volumes:
+            - "/srv/{{ ourcompose_firefly_storage }}/firefly_export:/var/www/firefly-iii/storage/export"
+            - "/srv/{{ ourcompose_firefly_storage }}/firefly_upload:/var/www/firefly-iii/storage/upload"
+          networks:
+            - frontend
+            - backend
+          environment:
+            APP_URL: "https://{{ ourcompose_common_domain }}"
+            APP_KEY: "{{ ourcompose_firefly_app_key }}"
+            APP_ENV: "local"
+            DB_HOST: "mariadb"
+            DB_DATABASE: 'firefly'
+            DB_USERNAME: 'firefly'
+            DB_PASSWORD: "{{ ourcompose_firefly_backend_password }}"
+            DB_CONNECTION: 'mysql'
+            MYSQL_PASSWORD: "{{ ourcompose_firefly_backend_password }}"
+            TRUSTED_PROXIES: "**"
+          healthcheck:
+            test: "{{ ourcompose_firefly_healthcheck }}"
+            interval: 5s
+            timeout: 30s
+            retries: 3
+      networks:
+        frontend:
+          external: true
+        backend:
+          external: true
+    pull: "{{ ourcompose_firefly_pull }}"
+    state: "{{ ourcompose_firefly_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_firefly_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_firefly_output
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Symlink firefly directory as a subdirectory
+  shell: docker exec -i firefly bash -c "ln -snfT /var/www/html/public/ /var/www/html/public/firefly"
+
+- name: (present) Set up the bind mountpoints
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.bind_mountpoints
+  vars:
+    ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_firefly_bind_mountpoints }}"
+    ourcompose_bind_mountpoints_container: 'firefly'
+
+#
+# Create user admin
+#
+- name: (present) Firefly-III is healthy
+  shell: "
+    docker exec -i firefly bash -c \"
+      curl -sSL --fail http://localhost:8080/firefly
+    \"
+  "
+  register: ourcompose_firefly_health
+  until: ourcompose_firefly_health['rc'] == 0
+  retries: 24
+  delay: 5
+
+- name: (present) Get the url
+  uri:
+    url: https://{{ ourcompose_common_domain }}/firefly/register
+    method: GET
+    return_content: True
+    validate_certs: "{{ ourcompose_common_validate_certs }}"
+  register: ourcompose_firefly_login
+
+- name: (present) Post to the URL
+  uri:
+    url: https://{{ ourcompose_common_domain }}/firefly/register
+    method: POST
+    body_format: form-urlencoded
+    headers:
+      Cookie: "{{ ourcompose_firefly_login['cookies_string'] }}"
+    body:
+      email: admin@{{ ourcompose_common_domain }}
+      password: "{{ ourcompose_firefly_admin_password }}"
+      password_confirmation: "{{ ourcompose_firefly_admin_password }}"
+      _token: "{{ ourcompose_firefly_login['content'].split('\n') | select('search', '_token') | first | regex_replace('.*name=\"_token\" value=\"([A-Za-z0-9]+).*$', '\\1') }}"
+    status_code: 302
+    validate_certs: "{{ ourcompose_common_validate_certs }}"
+  when: "'Sorry, an error occurred.' not in ourcompose_firefly_login['content']"

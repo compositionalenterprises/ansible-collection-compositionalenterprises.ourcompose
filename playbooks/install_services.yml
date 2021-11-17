@@ -1,0 +1,7 @@
+- hosts: all
+  tasks:
+    - include_role:
+        name: "compositionalenterprises.ourcompose.{{ item }}"
+      loop: "{{ ourcompose_common_services }}"
+      vars:
+        ourcompose_nginx_restarted: yes

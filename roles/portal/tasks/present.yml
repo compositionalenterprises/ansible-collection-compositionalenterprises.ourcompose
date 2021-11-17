@@ -1,0 +1,266 @@
+---
+#
+# Set up the commands_receivable supervisor daemon
+#
+- name: (present) Set up SSH keys
+  openssh_keypair:
+    path: "~/.ssh/commands_receivable"
+    type: ed25519
+    state: present
+
+- name: (present) Slurp public key file contents
+  slurp:
+    src: "~/.ssh/commands_receivable.pub"
+  register: ourcompose_portal_crpubkey
+
+- name: (present) Add Commands Receivable public key to authorized key files
+  authorized_key:
+    user: root
+    state: present
+    key: "{{ ourcompose_portal_crpubkey['content'] | b64decode }}"
+
+- name: (present) Commands receivable executable is deployed
+  template:
+    src: '../templates/portal_commands_receivable.py.j2'
+    dest: '/usr/local/bin/commands_receivable.py'
+    mode: '0744'
+
+- name: (present) Systemd service and socket file are deployed
+  copy:
+    src: "portal_commands_receivable.{{ item }}"
+    dest: "/etc/systemd/system/commands_receivable.{{ item }}"
+  with_items:
+    - 'service'
+    - 'socket'
+
+- name: (present) systemd socket is started and enabled
+  systemd:
+    name: commands_receivable.socket
+    state: "{% if ourcompose_portal_restarted %}re{% endif %}started"
+    daemon_reload: True
+
+#
+# Hop back into the regular nginx conf/DB setup and container deploy
+#
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_portal.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/portal.conf"
+
+- name: (present) The MariaDB database service is up and initialized
+  # We're running a while loop to check to ensure that the mariadb database has
+  # initialized:
+  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the MariaDB database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_portal_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Ensure portal_credentials directory exists
+  file:
+    path: "/srv/{{ ourcompose_portal_storage }}/portal_credentials"
+    state: directory
+
+- name: (present) Create credentials files
+  # So, let's review POSIX standards, shall we?
+  #
+  #     3.206 Line
+  #     A sequence of zero or more non- <newline> characters plus a terminating
+  #     <newline> character.
+  #
+  # So, these _files_, as we graciously call what we are templating below,
+  # contain no lines. Now, wouldn't that mean that they are blank files? No! To
+  # the contrary according to ruby developers around the world. These files are
+  # to the standard of these blaggards who snub the very idea of
+  # interoperability. So, be aware! These files **MUST** not have a line that
+  # ends in a newline.
+  template:
+    src: 'portal_{{ item }}.j2'
+    dest: "/srv/{{ ourcompose_portal_storage }}/portal_credentials/{{ item }}"
+    mode: 0600
+    owner: root
+  loop:
+    - 'production.key'
+    - 'production.yml.enc'
+
+- name: (present) Determine whether the portal service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep portal
+  failed_when: False
+  register: ourcompose_portal_existing
+
+- name: Deploy Container
+  block:
+    - name: (present) The latest portal service is built and {{ ourcompose_portal_state }}
+      docker_compose:
+        project_name: portal
+        definition:
+          version: '3.6'
+          services:
+              portal:
+                  image: "compositionalenterprises/portal:{{ ourcompose_portal_version }}"
+                  container_name: portal
+                  restart: always
+                  volumes:
+                      - "/srv/{{ ourcompose_portal_storage }}/portal_storage/:/app/storage/"
+                      - "/srv/{{ ourcompose_portal_storage }}/portal_credentials/:/app/config/credentials/"
+                      - "/srv/{{ ourcompose_nginx_storage }}/nginx_logs/:/srv/nginx_logs/"
+                      - "/var/run/commands_receivable.sock:/var/run/commands_receivable.sock"
+                  networks:
+                      - frontend
+                      - backend
+                  environment:
+                    DB_HOST: 'mariadb'
+                    DB_NAME: 'portal'
+                    DB_USER: 'portal'
+                    DB_PASS: "{{ ourcompose_portal_backend_password }}"
+                    BASE_URL: "{{ ourcompose_common_domain }}"
+                    ORG_NAME: "{{ ourcompose_portal_org_name }}"
+                    ADMIN_EMAIL: "{{ ourcompose_portal_admin_email }}"
+                    ADMIN_PASSWORD: "{{ ourcompose_portal_admin_password }}"
+                    SERVICES: "{{ ourcompose_common_services | join(' ') }}"
+                    RAILS_RELATIVE_URL_ROOT: '/portal'
+                    HOST: "{{ ourcompose_common_domain }}"
+                    RUNDECK_API_TOKEN: "{{ ourcompose_portal_rundeck_apitoken | default(ourcompose_rundeck_apitoken, true) }}"
+                    ENVIRONMENT_VAULT_PASSWORD: "{{ lookup('file', '../environment/.vault_pass', errors='warn') | default() }}"
+                    INITIAL_INSTALL: "{{ ourcompose_portal_initial_install }}"
+                    ROLE_BRANCH: "{{ ourcompose_portal_role_branch }}"
+                    OURCOMPOSEBOT_RO_KEY: "{{ ourcompose_portal_ourcomposebot_ro_key }}"
+                  healthcheck:
+                    test: "{{ ourcompose_portal_healthcheck }}"
+                    interval: 5s
+                    timeout: 30s
+                    retries: 3
+
+          networks:
+              frontend:
+                  external: true
+              backend:
+                  external: true
+        pull: "{{ ourcompose_portal_pull }}"
+        state: "{{ ourcompose_portal_state }}"
+        # If the container is not already present, we don't want to pass
+        # the 'restarted' parameter, we just want it restarted regularly.
+        restarted: "{{ not ourcompose_portal_existing['rc'] and ourcompose_portal_restarted }}"
+        timeout: 200
+      register: ourcompose_portal_output
+      no_log: "{{ ourcompose_common_no_log }}"
+  rescue:
+    - name: (present) Forcibly clean the docker cache
+      command: docker system prune -a -f
+
+    - name: (present) The latest portal service is built and {{ ourcompose_portal_state }}
+      docker_compose:
+        project_name: portal
+        definition:
+          version: '3.6'
+          services:
+              portal:
+                  image: "compositionalenterprises/portal:{{ ourcompose_portal_version }}"
+                  container_name: portal
+                  restart: always
+                  volumes:
+                      - "/srv/{{ ourcompose_portal_storage }}/portal_storage/:/app/storage/"
+                      - "/srv/{{ ourcompose_portal_storage }}/portal_credentials/:/app/config/credentials/"
+                      - "/srv/{{ ourcompose_nginx_storage }}/nginx_logs/:/srv/nginx_logs/"
+                      - "/var/run/commands_receivable.sock:/var/run/commands_receivable.sock"
+                  networks:
+                      - frontend
+                      - backend
+                  environment:
+                    DB_HOST: 'mariadb'
+                    DB_NAME: 'portal'
+                    DB_USER: 'portal'
+                    DB_PASS: "{{ ourcompose_portal_backend_password }}"
+                    BASE_URL: "{{ ourcompose_common_domain }}"
+                    ORG_NAME: "{{ ourcompose_portal_org_name }}"
+                    ADMIN_EMAIL: "{{ ourcompose_portal_admin_email }}"
+                    ADMIN_PASSWORD: "{{ ourcompose_portal_admin_password }}"
+                    SERVICES: "{{ ourcompose_common_services | join(' ') }}"
+                    RAILS_RELATIVE_URL_ROOT: '/portal'
+                    HOST: "{{ ourcompose_common_domain }}"
+                    RUNDECK_API_TOKEN: "{{ ourcompose_portal_rundeck_apitoken | default(ourcompose_rundeck_apitoken, true) }}"
+                    ENVIRONMENT_VAULT_PASSWORD: "{{ lookup('file', '../environment/.vault_pass', errors='warn') | default() }}"
+                    INITIAL_INSTALL: "{{ ourcompose_portal_initial_install }}"
+                    ROLE_BRANCH: "{{ ourcompose_portal_role_branch }}"
+                    OURCOMPOSEBOT_RO_KEY: "{{ ourcompose_portal_ourcomposebot_ro_key }}"
+                  healthcheck:
+                    test: "{{ ourcompose_portal_healthcheck }}"
+                    interval: 5s
+                    timeout: 30s
+                    retries: 3
+
+          networks:
+              frontend:
+                  external: true
+              backend:
+                  external: true
+        pull: "{{ ourcompose_portal_pull }}"
+        state: "{{ ourcompose_portal_state }}"
+        # If the container is not already present, we don't want to pass
+        # the 'restarted' parameter, we just want it restarted regularly.
+        restarted: "{{ not ourcompose_portal_existing['rc'] and ourcompose_portal_restarted }}"
+      register: ourcompose_portal_output
+      timeout: 200
+      no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) The portal cron job for health checks
+  cron:
+    name: "Portal Health Check"
+    minute: "*/10"
+    hour: "*"
+    day: "*"
+    job: "/usr/bin/docker exec portal /app/bin/seeds/health_check.sh"
+
+- name: (present) The portal cron job to update the database with daily data
+  cron:
+    name: "Portal Full Backup"
+    minute: "{{ ourcompose_portal_cron_minute }}"
+    hour: "{{ ourcompose_portal_cron_hour }}"
+    day: "{{ ourcompose_portal_cron_day }}"
+    job: "/usr/bin/docker exec portal /app/bin/backup.sh"
+
+#
+# Admin Password
+#
+- name: (present) Portal has all of its database migrations ran
+  shell: "
+    docker exec -i portal sh -c \"
+      export RAILS_ENV=production;
+      bundle exec rake db:migrate:status 2>/dev/null |
+        sed '/^$/d' |
+        tail -n 1 |
+        tr -s ' ' |
+        cut -d ' ' -f 2
+      \"
+    "
+  register: ourcompose_portal_migrations
+  until: "'up' in ourcompose_portal_migrations['stdout']"
+  retries: 24
+  delay: 5
+
+- name: (present) Create the admin account
+  # Update or Add admin script example
+  # See /app/bin/rake_admin.sh script on server for env vars
+  shell: "
+    docker exec -i
+        -e PORTAL_ADMIN_CREATE_UPDATE=CREATE
+        -e PORTAL_ADMIN_EMAIL=admin@{{ ourcompose_common_domain }}
+        -e PORTAL_ADMIN_PASSWORD={{ ourcompose_portal_admin_password }}
+        -e PORTAL_ADMIN_SEND_EMAIL_FLAG=NO portal
+      '/app/bin/seeds/rake_admin.sh'
+    "
+  register: ourcompose_portal_create_admin
+  failed_when: False
+    #- ourcompose_portal_create_admin['rc'] not in [0, 127]
+
+- name: (present) Set up the bind mountpoints
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.bind_mountpoints
+  vars:
+    ourcompose_bind_mountpoints_container: 'portal'
+    ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_portal_bind_mountpoints }}"

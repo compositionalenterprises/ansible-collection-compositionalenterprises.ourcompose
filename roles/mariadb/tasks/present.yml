@@ -1,0 +1,55 @@
+---
+- name: (present) Migrate any legacy directories
+  shell:
+    cmd: "mv /srv/{{ ourcompose_mariadb_storage }}/database_{{ item }} /srv/{{ ourcompose_mariadb_storage }}/mariadb_{{ item }}"
+  loop:
+    - 'mysql'
+    - 'conf.d'
+  # We're just brute-forcing the move here. stable-5.X this entire task can be removed
+  failed_when: False
+
+- name: (present) Determine whether the mariadb service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep mariadb
+  failed_when: False
+  register: ourcompose_mariadb_existing
+
+- name: (present) The latest mariadb service is built and present
+  docker_compose:
+    project_name: mariadb
+    timeout: 60
+    definition:
+      version: '3.6'
+      services:
+          mariadb:
+              image: "mariadb:{{ ourcompose_mariadb_version }}"
+              container_name: mariadb
+              restart: always
+              volumes:
+                  - "/srv/{{ ourcompose_mariadb_storage }}/mariadb_mysql:/var/lib/mysql"
+                  - "/srv/{{ ourcompose_mariadb_storage }}/mariadb_conf.d:/etc/mysql/conf.d"
+              networks:
+                  - backend
+              environment:
+                  MYSQL_ROOT_PASSWORD: "{{ ourcompose_mariadb_root_password }}"
+              healthcheck:
+                test: "{{ ourcompose_mariadb_healthcheck }}"
+                interval: 5s
+                timeout: 30s
+                retries: 3
+      networks:
+          backend:
+              name: backend
+    pull: "{{ ourcompose_mariadb_pull }}"
+    state: "{{ ourcompose_mariadb_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_mariadb_existing['rc'] and ourcompose_mariadb_restarted }}"
+    timeout: 200
+  register: ourcompose_backend_output
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: Set mariadb_root_password for the rest of the playbook
+  set_fact:
+    ourcompose_mariadb_root_password: "{{ ourcompose_mariadb_root_password }}"
+  no_log: "{{ ourcompose_common_no_log }}"

@@ -1,0 +1,4 @@
+User-agent: *
+{% for service in ourcompose_common_services if service not in ['mariadb', 'nginx', 'jekyll', 'wordpress'] %}
+Disallow: /{{ service }}
+{% endfor %}

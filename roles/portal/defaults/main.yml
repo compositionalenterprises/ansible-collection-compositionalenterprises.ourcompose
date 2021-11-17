@@ -1,0 +1,33 @@
+---
+ourcompose_portal_pull: yes
+ourcompose_portal_state: present
+ourcompose_portal_version: '1.9.7'
+ourcompose_portal_storage: 'local'
+ourcompose_portal_restarted: 'yes'
+ourcompose_portal_role_branch: 'master'
+ourcompose_portal_backend_password: 'testpassword'
+ourcompose_portal_production_key: 'cb569b8ea39a7dada216dffaee8f7ec3'
+ourcompose_portal_production_yml_enc: 'mMb7knWzem8t5jXbs66LiTh+MuR4VhwttCJcshES87zG37kDxQ6tqKE5FiW3BW70orag1vVTxfL6kxnd665c/P0L9/ImWFKtbPNBbomsy/CVyFbQo4VkWC0SOi1FzKNFKkmLPdjcqFt0A37BYQjXdTNk+7x9IGyTI2tZg4h2p6qqGXB5NBJYIWoXEmCTnO9H05HxMoCqhTQCoCZeKeXKVIppweTsT80LIIVM6VJIomaSItp/XzMrmvaKek466hw9koR5z7dinzAtJnnsrBzbfF2+yAtryp8jpi+gvpll--qAM4pQghNMegIdn5--uKGo/l6lbwxIORk+raRVOw=='
+ourcompose_portal_ourcomposebot_ro_key: ''
+ourcompose_portal_rundeck_apitoken: ''
+ourcompose_rundeck_apitoken: ''
+ourcompose_portal_admin_password: 'testpassword'
+ourcompose_portal_org_name: "{{ ourcompose_common_domain.split('.')[0].upper() }}"
+ourcompose_portal_admin_email: "{{ ourcompose_common_admin }}@{{ ourcompose_common_domain }}"
+ourcompose_portal_initial_install: "0"
+# range takes (i, j) where the generated ints are [i, i+1, i+2, ..., j-1].
+# So, by doing this, we are actually NOT allowing anything to be set at 3:60, etc.
+# but the highest option we could have would be 5:59
+ourcompose_portal_cron_minute: "{{ range(0, 60) | random }}"
+ourcompose_portal_cron_hour: "{{ range(3, 5) | random }}"
+ourcompose_portal_cron_day: "*/2"
+ourcompose_portal_bind_mountpoints:
+  - {location: '/portal/packs/', directory: '/app/public/packs'}
+ourcompose_portal_mariadb_script: |
+  CREATE USER IF NOT EXISTS 'portal'@'%' IDENTIFIED BY '{{ ourcompose_portal_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS portal;
+  GRANT ALL PRIVILEGES ON portal.* TO 'portal'@'%';
+ourcompose_portal_healthcheck: |
+  wget --quiet --no-verbose --tries=1 --spider localhost:3000/portal \
+  && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate nginx$$(wget --quiet --no-verbose --tries=1 localhost:3000/portal -O - | grep -oe "[A-Za-z0-9/_-]\+.css" | head -n 1 | sed 's/^{{ ourcompose_common_domain.split(".")[-1] }}//') \
+  || exit 1

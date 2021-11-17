@@ -1,0 +1,6 @@
+---
+dependencies:
+  - compositionalenterprises.ourcompose.common
+  - compositionalenterprises.ourcompose.nginx
+  - role: compositionalenterprises.ourcompose.mariadb
+    ourcompose_mariadb_restarted: false

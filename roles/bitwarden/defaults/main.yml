@@ -1,0 +1,18 @@
+---
+ourcompose_bitwarden_pull: yes
+ourcompose_bitwarden_state: present
+ourcompose_bitwarden_version: '1.21.0'
+ourcompose_bitwarden_storage: 'local'
+ourcompose_bitwarden_admin_password: 'testpassword'
+ourcompose_bitwarden_admin_token: 'testpassword'
+ourcompose_bitwarden_bind_mountpoints:
+  - {location: '/bitwarden/app/', directory: '/web-vault/app'}
+  - {location: '/bitwarden/scripts/', directory: '/web-vault/scripts'}
+  - {location: '/bitwarden/images/', directory: '/web-vault/images'}
+  - {location: '/bitwarden/locales/', directory: '/web-vault/locales'}
+  - {location: '/bitwarden/fonts/', directory: '/web-vault/fonts'}
+ourcompose_bitwarden_healthcheck: |
+  curl -sSL --fail localhost/bitwarden/alive \
+  && curl -L --fail --insecure -o - "nginx/bitwarden/$$(curl -sSL --fail localhost/bitwarden | grep -oe 'app/[a-z0-9.]\+' | head -n 1)" &>/dev/null \
+  && curl -L --fail --insecure -o - "nginx/bitwarden/$$(curl -sSL --fail localhost/bitwarden | grep -oe 'images/[a-z0-9./@-]\+' | head -n 1)" &>/dev/null \
+  || exit 1

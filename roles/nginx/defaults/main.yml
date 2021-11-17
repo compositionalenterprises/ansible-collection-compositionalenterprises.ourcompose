@@ -1,0 +1,10 @@
+---
+ourcompose_nginx_html_dir: '/usr/share/nginx/html'
+ourcompose_nginx_pull: 'yes'
+ourcompose_nginx_state: 'present'
+ourcompose_nginx_version: '1.17'
+ourcompose_nginx_storage: 'local'
+ourcompose_nginx_restarted: 'no'
+# TODO: This could probably be better
+ourcompose_nginx_healthcheck: |
+  service nginx status || exit 1

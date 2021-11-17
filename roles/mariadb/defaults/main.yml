@@ -1,0 +1,10 @@
+---
+ourcompose_mariadb_pull: 'yes'
+ourcompose_mariadb_state: 'present'
+ourcompose_mariadb_version: '10.5'
+ourcompose_mariadb_storage: 'local'
+ourcompose_mariadb_restarted: 'yes'
+ourcompose_mariadb_root_password: 'testpassword'
+ourcompose_mariadb_healthcheck: |
+  mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e 'SHOW DATABASES;' \
+  || exit 1

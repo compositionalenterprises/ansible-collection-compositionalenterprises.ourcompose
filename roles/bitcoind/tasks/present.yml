@@ -1,0 +1,45 @@
+---
+- name: (present) The bitcoind data dir is created
+  file:
+    path: "/srv/{{ ourcompose_jekyll_storage }}/bitcoind_data/"
+    state: directory
+    recurse: True
+
+- name: (present) Bitcoin.conf is templated
+  template:
+    src: ../templates/bitcoind_bitcoin.conf.j2
+    dest: "/srv/{{ ourcompose_jekyll_storage }}/bitcoind_data/bitcoin.conf"
+
+- name: (present) Determine whether the bitcoind service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep bitcoind
+  failed_when: False
+  register: ourcompose_bitcoind_existing
+
+- name: (present) The latest bitcoind service is built and {{ ourcompose_bitcoind_state }}
+  docker_compose:
+    project_name: bitcoind
+    definition:
+      version: '3.6'
+      services:
+          bitcoind:
+            image: "zquestz/bitcoin-unlimited:{{ ourcompose_bitcoind_version }}"
+            container_name: 'bitcoind'
+            volumes:
+              - "/srv/{{ ourcompose_bitcoind_storage }}/bitcoind_data:/data"
+            ports:
+              - "8333:8333"
+              # JSON-RPC
+              - "8332:8332"
+            healthcheck:
+              test: "{{ ourcompose_bitcoind_healthcheck }}"
+              interval: 5s
+              timeout: 30s
+              retries: 3
+    pull: "{{ ourcompose_bitcoind_pull }}"
+    state: "{{ ourcompose_bitcoind_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_bitcoind_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_bitcoind_output
