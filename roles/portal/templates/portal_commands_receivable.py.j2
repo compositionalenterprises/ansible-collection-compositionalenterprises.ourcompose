@@ -17,7 +17,7 @@ def get_no_cache(build_target, collection_version):
     if collection_version.startswith('v'):
         # This gets the stable major version that the tag is targeting
         # from the string like 'v3.2.1'
-        oc_mgmt_branch = 'stable-' +collection_version.split()[1]
+        oc_mgmt_branch = 'stable-' + collection_version[1]
     elif collection_version.startswith('stable'):
         # This gets the stable major version from the tag that is
         # targeting the 'stable-3.2' type string
