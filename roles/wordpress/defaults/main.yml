@@ -1,0 +1,15 @@
+---
+ourcompose_wordpress_pull: yes
+ourcompose_wordpress_state: present
+ourcompose_wordpress_version: '5.7'
+ourcompose_wordpress_storage: 'local'
+ourcompose_wordpress_title: 'Wordpress Blog'
+ourcompose_wordpress_admin_password: 'testpassword'
+ourcompose_wordpress_backend_password: 'testpassword'
+ourcompose_wordpress_mariadb_script: |
+  CREATE USER IF NOT EXISTS 'wordpress'@'%' IDENTIFIED BY '{{ ourcompose_wordpress_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS wordpress;
+  GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'%';
+ourcompose_wordpress_healthcheck: |
+  curl -sSL --fail --insecure nginx/wordpress \
+  || exit 1

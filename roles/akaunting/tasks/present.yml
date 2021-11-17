@@ -1,0 +1,86 @@
+---
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_akaunting.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/akaunting.conf"
+
+- name: (present) The mariadb service is up and initialized
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the mariadb
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_akaunting_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Determine whether the akaunting service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep akaunting
+  failed_when: False
+  register: ourcompose_akaunting_existing
+
+- name: (present) The akaunting service is built and {{ ourcompose_akaunting_state }}
+  docker_compose:
+    project_name: akaunting
+    definition: 
+      version: '3.6'
+      services:
+          akaunting:
+              image: "akaunting/akaunting:{{ ourcompose_akaunting_version }}"
+              container_name: akaunting
+              restart: always
+              networks:
+                - frontend
+                - backend
+              environment:
+                DB_HOST: "mariadb"
+                DB_DATABASE: "akaunting"
+                DB_USERNAME: "akaunting"
+                APP_URL: https://{{ ourcompose_common_domain }}/akaunting
+                DB_PASSWORD: "{{ ourcompose_akaunting_backend_password }}"
+                ADMIN_EMAIL: "{{ ourcompose_akaunting_admin_email }}"
+                PASSWORD: "{{ ourcompose_akaunting_admin_password }}"
+      networks:
+          frontend:
+              external: true
+          backend:
+              external: true
+    pull: "{{ ourcompose_akaunting_pull }}"
+    state: "{{ ourcompose_akaunting_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_akaunting_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_akaunting_output
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Symlink akaunting directory
+  shell: docker exec -i akaunting bash -c "ln -snfT /var/www/html/ /var/www/html/akaunting"
+
+- name: (present) Register the number of tables
+  shell: if [ $(docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "select count(*) as totaltables from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=\"akaunting\"" | tail -n 1) -gt 5 ]; then echo "HasTables"; else echo "MissingTables"; fi
+  args: 
+    executable: '/bin/bash'
+  register: number_of_tables_status
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Configure Database
+  shell: docker exec -i akaunting php artisan install --db-host="mariadb" --db-name="akaunting" --db-username="akaunting" --db-password="{{ ourcompose_akaunting_backend_password }}" --admin-email="{{ ourcompose_akaunting_admin_email }}" --admin-password="{{ ourcompose_akaunting_admin_password }}"
+  args: 
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+  when: number_of_tables_status.stdout == "MissingTables"
+
+- name: (present) Change Storage Permissions
+  shell: docker exec -it akaunting chmod -R 777 /var/www/html/storage/
+  args: 
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the bind mountpoints
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.bind_mountpoints
+  vars:
+    ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_akaunting_bind_mountpoints }}"
+    ourcompose_bind_mountpoints_container: 'akaunting'

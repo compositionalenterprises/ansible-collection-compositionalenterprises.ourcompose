@@ -1,0 +1,4 @@
+- name: Restart Kanboard
+  shell:
+    cmd: docker restart kanboard
+  listen: restart_kanboard

@@ -1,0 +1,137 @@
+---
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_kanboard.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/kanboard.conf"
+
+- name: (present) The mariadb database service is up and initialized
+  # We're running a while loop to check to ensure that the mariadb database has
+  # initialized:
+  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the MySQL database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_kanboard_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Determine whether the kanboard service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep kanboard
+  failed_when: False
+  register: ourcompose_kanboard_existing
+
+- name: (present) The latest kanboard service is built and {{ ourcompose_kanboard_state }}
+  docker_compose:
+    project_name: kanboard
+    definition:
+      version: '3.6'
+      services:
+          kanboard:
+              image: "kanboard/kanboard:{{ ourcompose_kanboard_version }}"
+              container_name: kanboard
+              restart: always
+              volumes:
+                  - "/srv/{{ ourcompose_kanboard_storage }}/kanboard_data:/var/www/app/data"
+                  - "/srv/{{ ourcompose_kanboard_storage }}/kanboard_plugins:/var/www/app/plugins"
+                  # We are not using the storage location here for two reasons. First of all, if we
+                  # use that location currently, it messes with the volumes, since the container natively
+                  # exposes `/etc/nginx/ssl`, and when we try to put this in a separate location other than
+                  # the normal volume directory, it barfs and only includes the `ssl` directory. This _has_
+                  # to have something to do with the volume being exposed, but there is nothing in the docs
+                  # that says that you can't mount a parent directory to a separate location from the
+                  # system location if a subdirectory is exposed. Secondly, since there are no changes made
+                  # during normal system operation to this directory after the setup is complete, and the
+                  # setup (replacing nginx.conf) runs every time we redeploy, the change will be made as
+                  # soon as any run is executed using these tasks. So when migrating a host, we don't need
+                  # to keep the contents of this directory, as we will set them up much like we do for most
+                  # of the other configuration directories. I hate having a one-off like this, but since it
+                  # will always be fixed on _any_ run of this role, we are safe to break the paradigm in
+                  # this case.
+                  #
+                  # See https://forums.docker.com/t/losing-files-when-creating-volume-of-parent-directory-of-exposed-volume-as-bind-mount/80890
+                  # for more info
+                  - "nginx:/etc/nginx"
+              networks:
+                  - frontend
+                  - backend
+              environment:
+                DATABASE_URL: "mysql://kanboard:{{ ourcompose_kanboard_backend_password }}@mariadb:3306/kanboard"
+                PLUGIN_INSTALLER: 'true'
+              healthcheck:
+                test: "{{ ourcompose_kanboard_healthcheck }}"
+                interval: 5s
+                timeout: 30s
+                retries: 3
+      networks:
+          frontend:
+              external: true
+          backend:
+              external: true
+      volumes:
+        nginx:
+    pull: "{{ ourcompose_kanboard_pull }}"
+    state: "{{ ourcompose_kanboard_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_kanboard_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_kanboard_output
+  no_log: "{{ ourcompose_common_no_log }}"
+
+#
+# The reverse proxy subdirectory setup is pretty bad, See:
+#
+# - https://github.com/kanboard/kanboard/issues/3534
+# - https://docs.kanboard.org/en/latest/admin_guide/url_rewriting.html
+#
+# But there is a workaround: https://github.com/kanboard/kanboard/issues/2561#issuecomment-238739921
+#
+- name: (present) Symlink kanboard directory
+  shell: docker exec -i kanboard bash -c "ln -snfT /var/www/app/ /var/www/app/kanboard"
+
+- name: (present) nginx.conf is deployed
+  copy:
+    src: 'kanboard_nginx.conf'
+    dest: '/var/lib/docker/volumes/kanboard_nginx/_data/nginx.conf'
+  notify: restart_kanboard
+
+- name: (present) Flush handlers to restart kanboard before setting up the bind mountpoints
+  meta: flush_handlers
+
+- name: (present) Set up the bind mountpoints
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.bind_mountpoints
+  vars:
+    ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_kanboard_bind_mountpoints }}"
+    ourcompose_bind_mountpoints_container: 'kanboard'
+
+#
+# Admin Password
+#
+- name: (present) Kanboard is healthy
+  shell: docker exec -i kanboard bash -c "curl -sSL --fail localhost/kanboard"
+  register: ourcompose_kanboard_health
+  until: ourcompose_kanboard_health['rc'] == 0
+  retries: 24
+  delay: 5
+
+# See https://github.com/kanboard/kanboard/issues/853 for explanation
+- name: (present) Generate the password hash
+  shell: "
+    docker exec -i kanboard bash -c \"
+      echo '
+        echo password_hash(\\\"{{ ourcompose_kanboard_admin_password }}\\\", PASSWORD_DEFAULT);'
+      | php -a\"
+    "
+  register: ourcompose_kanboard_admin_password_hash
+
+- name: (present) The existing password is replaced in the database
+  shell: "
+    docker exec -i mariadb bash -c \"
+      mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e
+        \\\"use kanboard; UPDATE users SET password='{{ ourcompose_kanboard_admin_password_hash['stdout_lines'][-1] | replace ('$', '\\\\\\$')}}' WHERE username='admin';\\\"
+      \"
+    "

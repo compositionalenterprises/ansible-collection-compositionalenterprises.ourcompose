@@ -1,0 +1,10 @@
+---
+ourcompose_bitcoind_pull: yes
+ourcompose_bitcoind_state: present
+ourcompose_bitcoind_version: '1.9.1.1'
+ourcompose_bitcoind_storage: 'local'
+# change to 18333 if running testnet
+ourcompose_bitcoind_ports: '8333:8333'
+ourcompose_bitcoind_admin_password: "testpassword"
+ourcompose_bitcoind_healthcheck: |
+  /entrypoint.sh bitcoin-cli getblockchaininfo

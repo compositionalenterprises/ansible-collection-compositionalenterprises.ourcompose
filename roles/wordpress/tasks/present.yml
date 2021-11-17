@@ -1,0 +1,114 @@
+---
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_wordpress.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/wordpress.conf"
+
+- name: (present) The mariadb database service is up and initialized
+  # We're running a while loop to check to ensure that the mariadb database has
+  # initialized:
+  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the mariadb database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_wordpress_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Determine whether the wordpress service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep wordpress
+  failed_when: False
+  register: ourcompose_wordpress_existing
+
+- name: (present) The latest wordpress service is built and {{ ourcompose_wordpress_state }}
+  docker_compose:
+    project_name: wordpress
+    definition:
+      version: '3.6'
+      services:
+          wordpress:
+              image: "wordpress:{{ ourcompose_wordpress_version }}"
+              container_name: wordpress
+              restart: always
+              volumes:
+                  - "/srv/{{ ourcompose_wordpress_storage }}/wordpress_themes:/var/www/html/wp-content/themes"
+                  - "/srv/{{ ourcompose_wordpress_storage }}/wordpress_plugins:/var/www/html/wp-content/plugins"
+                  - "/srv/{{ ourcompose_wordpress_storage }}/wordpress_uploads:/var/www/html/wp-content/uploads"
+              networks:
+                  - frontend
+                  - backend
+              environment:
+                WORDPRESS_DB_HOST: "mariadb"
+                WORDPRESS_DB_USER: 'wordpress'
+                WORDPRESS_DB_PASSWORD: "{{ ourcompose_wordpress_backend_password }}"
+                WORDPRESS_DB_NAME: "wordpress"
+                WORDPRESS_CONFIG_EXTRA: |
+                  /* Fix Subdirectory config */
+                  define('WP_SITEURL', 'https://{{ ourcompose_common_domain }}/wordpress');
+                  define('WP_HOME', 'https://{{ ourcompose_common_domain }}/wordpress');
+                  define('WP_MEMORY_LIMIT', '2048M');
+              healthcheck:
+                test: "{{ ourcompose_wordpress_healthcheck }}"
+                interval: 5s
+                timeout: 30s
+                retries: 3
+      networks:
+          frontend:
+              external: true
+          backend:
+              external: true
+    pull: "{{ ourcompose_wordpress_pull }}"
+    state: "{{ ourcompose_wordpress_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_wordpress_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_wordpress_output
+  no_log: "{{ ourcompose_common_no_log }}"
+
+#
+# Setup Configuration
+#
+- name: (present) Symlink wordpress directory as a sub-directory
+  shell: docker exec -i wordpress bash -c "ln -snfT /var/www/html/ /var/www/html/wordpress"
+
+- name: (present) Ensure large file uploads are permitted in htaccess
+  shell: docker exec -i wordpress bash -c "grep -qxF '{{ item }}' /var/www/html/.htaccess || echo '{{ item }}' >> /var/www/html/.htaccess"
+  when: ourcompose_wordpress_output.changed
+  with_items:
+    - 'php_value upload_max_filesize 2048M'
+    - 'php_value post_max_size 2048M'
+    - 'php_value max_execution_time 300'
+    - 'php_value max_input_time 300'
+
+- name: (present) Ensure uploads have a location to upload to
+  shell: docker exec -i wordpress bash -c "mkdir -p /var/www/html/wp-content/uploads && chown -R 33:33 /var/www/html/wp-content/uploads"
+  when: ourcompose_wordpress_output.changed
+
+#
+# Finish install if necessary
+#
+- name: (present) Automate Wordpress Initial Install
+  shell: "
+    docker exec -u 33 -i wordpress bash -c \"
+      curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar;
+      php wp-cli.phar core is-installed ||
+      php wp-cli.phar core install
+        --url='{{ ourcompose_common_domain }}'
+        --title='{{ ourcompose_wordpress_title }}'
+        --admin_user='admin'
+        --admin_password='{{ ourcompose_wordpress_admin_password }}'
+        --admin_email='admin@admin.com'
+        --skip-email;
+      \"
+    "
+
+- name: (present) Make sure dataqbase is up-to-date
+  shell: "
+    docker exec -u 33 -i wordpress bash -c \"
+      php wp-cli.phar core update-db;
+      \"
+    "

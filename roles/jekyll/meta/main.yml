@@ -1,0 +1,6 @@
+---
+dependencies:
+  - compositionalenterprises.ourcompose.common
+  - compositionalenterprises.ourcompose.nginx
+  - role: compositionalenterprises.ourcompose.portal
+    ourcompose_portal_restarted: false

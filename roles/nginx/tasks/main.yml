@@ -1,0 +1,7 @@
+---
+- name: Export nginx storage location globally
+  set_fact:
+    ourcompose_nginx_storage: "{{ ourcompose_nginx_storage }}"
+    ourcompose_nginx_html_dir: "{{ ourcompose_nginx_html_dir }}"
+
+- include_tasks: "./present.yml"

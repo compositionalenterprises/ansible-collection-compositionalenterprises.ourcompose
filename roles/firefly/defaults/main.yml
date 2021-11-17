@@ -1,0 +1,23 @@
+---
+ourcompose_firefly_pull: yes
+ourcompose_firefly_state: present
+ourcompose_firefly_version: 'version-5.5.13'
+ourcompose_firefly_storage: 'local'
+ourcompose_firefly_admin_password: 'testpassword1234'
+ourcompose_firefly_backend_password: 'testpassword'
+# This value has to be exactly 32 characters, it is the encryption key for your database and sessions
+ourcompose_firefly_app_key: 'testtesttesttesttesttesttesttest'
+ourcompose_firefly_bind_mountpoints:
+  - {location: '/firefly/v1/css/', directory: '/var/www/html/public/v1/css'}
+  - {location: '/firefly/v1/fonts/', directory: '/var/www/html/public/v1/fonts'}
+  - {location: '/firefly/v1/images/', directory: '/var/www/html/public/v1/images'}
+  - {location: '/firefly/v1/js/', directory: '/var/www/html/public/v1/js'}
+  - {location: '/firefly/v1/lib/', directory: '/var/www/html/public/v1/lib'}
+ourcompose_firefly_mariadb_script: |
+  CREATE USER IF NOT EXISTS 'firefly'@'%' IDENTIFIED BY '{{ ourcompose_firefly_backend_password }}';
+  CREATE DATABASE IF NOT EXISTS firefly;
+  GRANT ALL PRIVILEGES ON firefly.* TO 'firefly'@'%';
+ourcompose_firefly_healthcheck: |
+  curl -sSL --fail --insecure localhost:8080/firefly \
+  && curl -sSL --fail --insecure nginx/firefly/$$(curl -sSL --fail --insecure localhost:8000/firefly | grep -oe 'v1/css/firefly.css?v=[0-9.]\+') \
+  || exit 1

@@ -1,0 +1,101 @@
+---
+- name: (present) Nginx conf is deployed
+  template:
+    src: "nginx_dolibarr.conf.j2"
+    dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/dolibarr.conf"
+
+- name: (present) The mariadb database service is up and initialized
+  # We're running a while loop to check to ensure that the mysql database has
+  # initialized:
+  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
+  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the mariadb database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_dolibarr_mariadb_script }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Determine whether the dolibarr service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep dolibarr
+  failed_when: False
+  register: ourcompose_dolibarr_existing
+
+- name: (present) The latest dolibarr service is built and {{ ourcompose_dolibarr_state }}
+  docker_compose:
+    project_name: dolibarr
+    definition:
+      version: '3.6'
+      services:
+          dolibarr:
+              image: "upshift/dolibarr:{{ ourcompose_dolibarr_version }}"
+              container_name: dolibarr
+              restart: always
+              volumes:
+                  - "/srv/{{ ourcompose_dolibarr_storage }}/dolibarr_html:/var/www/html/"
+                  - "/srv/{{ ourcompose_dolibarr_storage }}/dolibarr_documents:/var/www/documents/"
+              networks:
+                  - frontend
+                  - backend
+              environment:
+                DOLI_DB_TYPE: 'mysqli'
+                DOLI_DB_HOST: 'mariadb'
+                DOLI_DB_NAME: 'dolibarr'
+                DOLI_DB_USER: 'dolibarr'
+                DOLI_DB_PASSWORD: "{{ ourcompose_dolibarr_backend_password }}"
+                DOLI_ADMIN_LOGIN: 'admin'
+                DOLI_ADMIN_PASSWORD: "{{ ourcompose_dolibarr_admin_password }}"
+                DOLI_MODULES: "{{ ourcompose_dolibarr_modules }}"
+                DOLI_URL_ROOT: "https://{{ ourcompose_common_domain }}/dolibarr"
+                DOLI_HTTPS: "0"
+                DOLI_NO_CSRF_CHECK: "1"
+                LANG: "en_US"
+              healthcheck:
+                test: "{{ ourcompose_dolibarr_healthcheck }}"
+                interval: 5s
+                timeout: 30s
+                retries: 3
+      networks:
+          frontend:
+              external: true
+          backend:
+              external: true
+      volumes:
+        nginx:
+    pull: "{{ ourcompose_dolibarr_pull }}"
+    state: "{{ ourcompose_dolibarr_state }}"
+    restarted: "{{ not ourcompose_dolibarr_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_dolibarr_output
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Wait for dolibarr to initialize
+  shell: docker logs --since 6m dolibarr 2>&1 | grep 'exec /usr/sbin/httpd -DFOREGROUND'
+  register: ourcompose_dolibarr_server_running
+  until: ourcompose_dolibarr_server_running['rc'] == 0
+  retries: 72
+  delay: 5
+
+- name: (present) Symlink dolibarr directory
+  shell: docker exec -i dolibarr bash -c "ln -snfT {{ item['target'] }} {{ item['link'] }}"
+  loop:
+    # First we link htdocs since that is the baseURL for apache to /var/www. That means
+    # the `/` of the webserver will serve `/var/www/`, and `/dolibarr` will serve `/var/www/dolibarr`
+    - {target: '/var/www', 'link': '/var/www/localhost/htdocs'}
+    # Then we link `/var/www/dolibarr` to `/var/www/html`, where the _actual_ app is stored.
+    - {target: '/var/www/html', 'link': '/var/www/dolibarr'}
+
+- name: (present) Set up the admin API key in the database
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} dolibarr <<< "update llx_user set api_key = '{{ ourcompose_dolibarr_admin_api_key }}' where login = 'admin'"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (present) Set up the bind mountpoints
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.bind_mountpoints
+  vars:
+    ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_dolibarr_bind_mountpoints }}"
+    ourcompose_bind_mountpoints_container: 'dolibarr'
