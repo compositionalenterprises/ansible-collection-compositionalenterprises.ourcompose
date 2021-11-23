@@ -1,0 +1,58 @@
+---
+- name: (present) Place build files in tmp dir
+  copy:
+    src: "../files/{{ item }}"
+    dest: '/var/tmp/callback_build_dir/'
+  loop:
+    - 'setup_privkey.sh'
+    - 'teardown_privkey.sh'
+    - 'Dockerfile'
+    - 'entrypoint.sh'
+
+- name: (present) Chmod build files appropriately
+  file:
+    path: '/var/tmp/callback_build_dir/{{ item }}'
+    mode: +x
+  loop:
+    - 'setup_privkey.sh'
+    - 'teardown_privkey.sh'
+    - 'entrypoint.sh'
+
+- name: (present) Determine whether the callback service is existing yet
+  shell:
+    cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep callback
+  failed_when: False
+  register: ourcompose_callback_existing
+
+- name: (present) The latest callback service is built and {{ ourcompose_callback_state }}
+  docker_compose:
+    project_name: callback
+    definition:
+      version: '3.6'
+      services:
+          callback:
+              image: "local/callback:latest"
+              build:
+                context: /var/tmp/callback_build_dir/
+                dockerfile: Dockerfile
+              container_name: 'callback'
+              restart: always
+              ports:
+                - "9022:22"
+              cap_add:
+                - LINUX_IMMUTABLE
+              environment:
+                CALLBACK_USER: "{{ ourcompose_callback_user }}"
+                CALLBACK_KEYS: "{{ ourcompose_callback_keys }}"
+              healthcheck:
+                test: "{{ ourcompose_callback_healthcheck }}"
+                interval: 5s
+                timeout: 30s
+                retries: 3
+    build: "{{ ourcompose_callback_build }}"
+    state: "{{ ourcompose_callback_state }}"
+    # If the container is not already present, we don't want to pass
+    # the 'restarted' parameter, we just want it restarted regularly.
+    restarted: "{{ not ourcompose_callback_existing['rc'] }}"
+    timeout: 200
+  register: ourcompose_callback_output
