@@ -12,7 +12,7 @@
   no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (present) Set up the mariadb database
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_nextcloud_mariadb_script }}"
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_nextcloud_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
@@ -23,7 +23,7 @@
   failed_when: False
   register: ourcompose_nextcloud_existing
 
-- name: (present) The nextcloud service is built and {{ ourcompose_nextcloud_state }}
+- name: (present) The nextcloud service is {% if not ourcompose_nextcloud_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: nextcloud
     definition:
@@ -59,7 +59,7 @@
               external: true
           backend:
               external: true
-    pull: "{{ ourcompose_nextcloud_pull }}"
+    pull: yes
     state: "{{ ourcompose_nextcloud_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

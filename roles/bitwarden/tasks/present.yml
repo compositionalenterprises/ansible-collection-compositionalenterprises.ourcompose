@@ -10,7 +10,7 @@
   failed_when: False
   register: ourcompose_bitwarden_existing
 
-- name: (present) The latest bitwarden service is built and {{ ourcompose_bitwarden_state }}
+- name: (present) The latest bitwarden service is {% if not ourcompose_bitwarden_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: bitwarden
     definition:
@@ -41,7 +41,7 @@
           frontend:
               external: true
 
-    pull: "{{ ourcompose_bitwarden_pull }}"
+    pull: yes
     state: "{{ ourcompose_bitwarden_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

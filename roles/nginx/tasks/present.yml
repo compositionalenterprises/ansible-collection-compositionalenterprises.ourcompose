@@ -23,7 +23,7 @@
   failed_when: False
   register: ourcompose_nginx_existing
 
-- name: (present) The latest nginx service is built and present
+- name: (present) The latest nginx service is {% if not ourcompose_nginx_existing['rc'] and ourcompose_nginx_restarted %}re{% endif %}started
   docker_compose:
     project_name: nginx
     definition:
@@ -51,7 +51,7 @@
       networks:
           frontend:
               name: frontend
-    pull: "{{ ourcompose_nginx_pull }}"
+    pull: yes
     state: "{{ ourcompose_nginx_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

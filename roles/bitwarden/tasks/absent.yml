@@ -1,0 +1,21 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) The bitwarden project is absented
+  community.docker.docker_container:
+    name: bitwarden
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: vaultwarden/server
+    state: absent
+    force_absent: yes
+
+- name: (absent) Remove the host bind mount volumes
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/srv/{{ ourcompose_bitwarden_storage}}/bitwarden_data"

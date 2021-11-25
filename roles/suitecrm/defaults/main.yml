@@ -1,5 +1,4 @@
 ---
-ourcompose_suitecrm_pull: yes
 ourcompose_suitecrm_state: present
 ourcompose_suitecrm_version: '7-debian-10'
 ourcompose_suitecrm_storage: 'local'
@@ -9,10 +8,13 @@ ourcompose_suitecrm_bind_mountpoints:
   - {location: '/suitecrm/themes/', directory: '/opt/bitnami/suitecrm/themes'}
   - {location: '/suitecrm/include/', directory: '/opt/bitnami/suitecrm/include'}
   - {location: '/suitecrm/vendor/', directory: '/opt/bitnami/suitecrm/vendor'}
-ourcompose_suitecrm_mariadb_script: |
+ourcompose_suitecrm_mariadb_present: |
   CREATE USER IF NOT EXISTS 'suitecrm'@'%' IDENTIFIED BY '{{ ourcompose_suitecrm_backend_password }}';
   CREATE DATABASE IF NOT EXISTS suitecrm;
   GRANT ALL PRIVILEGES ON suitecrm.* TO 'suitecrm'@'%';
+ourcompose_suitecrm_mariadb_absent: |
+  DROP USER IF EXISTS 'suitecrm'@'%';
+  DROP DATABASE IF EXISTS suitecrm;
 ourcompose_suitecrm_healthcheck: |
   curl -sSL --fail --insecure localhost:8080/suitecrm \
   && curl -sSL --fail --insecure nginx/suitecrm/$$(curl -sSL --fail --insecure localhost:8000/suitecrm | grep -oe 'v1/css/suitecrm.css?v=[0-9.]\+') \

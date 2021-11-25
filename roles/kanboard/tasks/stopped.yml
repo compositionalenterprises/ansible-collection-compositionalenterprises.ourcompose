@@ -1,0 +1,14 @@
+---
+- name: (stopped) Nginx conf is absent
+  file:
+    path: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/kanboard.conf"
+    state: 'absent'
+
+- name: (stopped) Reload nginx container
+  shell:
+    cmd: docker exec -i nginx nginx -s reload
+
+- name: (stopped) The container is stopped
+  community.docker.docker_container:
+    name: kanboard
+    state: stopped

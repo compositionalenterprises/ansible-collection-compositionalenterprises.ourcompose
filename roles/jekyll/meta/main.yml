@@ -1,6 +1,8 @@
 ---
 dependencies:
   - compositionalenterprises.ourcompose.common
-  - compositionalenterprises.ourcompose.nginx
+  - role: compositionalenterprises.ourcompose.nginx
+    when: ourcompose_jekyll_state == 'present'
   - role: compositionalenterprises.ourcompose.portal
     ourcompose_portal_restarted: false
+    when: ourcompose_jekyll_state == 'present'

@@ -12,7 +12,7 @@
   no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (present) Set up the MariaDB database
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_commandcenter_mariadb_script }}"
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_commandcenter_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
@@ -52,7 +52,7 @@
 
 - name: Deploy Container
   block:
-    - name: (present) The commandcenter service version {{ ourcompose_commandcenter_version }} is built and {{ ourcompose_commandcenter_state }}
+    - name: (present) The commandcenter service is {% if not ourcompose_commandcenter_existing['rc'] %}re{% endif %}started
       docker_service:
         project_name: commandcenter
         definition:
@@ -88,7 +88,7 @@
               backend:
                   external: true
 
-        pull: "{{ ourcompose_commandcenter_pull }}"
+        pull: yes
         state: "{{ ourcompose_commandcenter_state }}"
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.
@@ -101,7 +101,7 @@
     - name: (present) Forcibly clean the docker cache
       command: docker system prune -a -f
 
-    - name: (present) The commandcenter service version {{ ourcompose_commandcenter_version }} is built and {{ ourcompose_commandcenter_state }}
+    - name: (present) The commandcenter service version {% if not ourcompose_commandcenter_existing['rc'] %}re{% endif %}started
       docker_service:
         project_name: commandcenter
         definition:
@@ -137,7 +137,7 @@
               backend:
                   external: true
 
-        pull: "{{ ourcompose_commandcenter_pull }}"
+        pull: yes
         state: "{{ ourcompose_commandcenter_state }}"
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.

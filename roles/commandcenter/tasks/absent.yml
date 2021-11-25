@@ -1,0 +1,25 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) Remove the service's tables from mariadb
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_commandcenter_mariadb_absent }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (absent) The commandcenter project is absented
+  community.docker.docker_container:
+    name: commandcenter
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: compositionalenterprises/commandcenter
+    state: absent
+    force_absent: yes
+
+- name: (absent) Remove the host bind mount volumes
+  file:
+    path: "/srv/{{ ourcompose_commandcenter_storage }}/commandcenter_credentials"
+    state: absent

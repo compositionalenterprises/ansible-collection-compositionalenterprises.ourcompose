@@ -1,5 +1,4 @@
 ---
-ourcompose_firefly_pull: yes
 ourcompose_firefly_state: present
 ourcompose_firefly_version: 'version-5.5.13'
 ourcompose_firefly_storage: 'local'
@@ -13,10 +12,13 @@ ourcompose_firefly_bind_mountpoints:
   - {location: '/firefly/v1/images/', directory: '/var/www/html/public/v1/images'}
   - {location: '/firefly/v1/js/', directory: '/var/www/html/public/v1/js'}
   - {location: '/firefly/v1/lib/', directory: '/var/www/html/public/v1/lib'}
-ourcompose_firefly_mariadb_script: |
+ourcompose_firefly_mariadb_present: |
   CREATE USER IF NOT EXISTS 'firefly'@'%' IDENTIFIED BY '{{ ourcompose_firefly_backend_password }}';
   CREATE DATABASE IF NOT EXISTS firefly;
   GRANT ALL PRIVILEGES ON firefly.* TO 'firefly'@'%';
+ourcompose_firefly_mariadb_absent: |
+  DROP USER IF EXISTS 'firefly'@'%';
+  DROP DATABASE IF EXISTS firefly;
 ourcompose_firefly_healthcheck: |
   curl -sSL --fail --insecure localhost:8080/firefly \
   && curl -sSL --fail --insecure nginx/firefly/$$(curl -sSL --fail --insecure localhost:8000/firefly | grep -oe 'v1/css/firefly.css?v=[0-9.]\+') \

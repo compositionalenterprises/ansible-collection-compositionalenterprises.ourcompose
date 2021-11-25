@@ -12,7 +12,7 @@
   no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (present) Set up the MySQL mariadb
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_bookstack_mariadb_script }}"
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_bookstack_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
@@ -34,7 +34,7 @@
   failed_when: False
   register: ourcompose_bookstack_existing
 
-- name: (present) The latest bookstack service is built and {{ ourcompose_bookstack_state }}
+- name: (present) The latest bookstack service is {% if not ourcompose_bookstack_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: bookstack
     definition:
@@ -71,7 +71,7 @@
               external: true
       volumes:
         nginx:
-    pull: "{{ ourcompose_bookstack_pull }}"
+    pull: yes
     state: "{{ ourcompose_bookstack_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

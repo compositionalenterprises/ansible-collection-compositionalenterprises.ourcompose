@@ -1,0 +1,30 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) Remove the service's tables from mariadb
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_nextcloud_mariadb_absent }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (absent) The nextcloud project is absented
+  community.docker.docker_container:
+    name: nextcloud
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: nextcloud
+    state: absent
+    force_absent: yes
+
+- name: (absent) Remove the host bind mount volumes
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/srv/{{ ourcompose_nextcloud_storage }}/nextcloud_data"
+    - "/srv/{{ ourcompose_nextcloud_storage }}/nextcloud_config"
+    - "/srv/{{ ourcompose_nextcloud_storage }}/nextcloud_themes"
+    - "/srv/{{ ourcompose_nextcloud_storage }}/nextcloud_custom_apps"

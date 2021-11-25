@@ -1,5 +1,4 @@
 ---
-ourcompose_kanboard_pull: yes
 ourcompose_kanboard_state: present
 ourcompose_kanboard_version: 'v1.2.19'
 ourcompose_kanboard_storage: 'local'
@@ -7,10 +6,13 @@ ourcompose_kanboard_admin_password: 'testpassword'
 ourcompose_kanboard_backend_password: 'testpassword'
 ourcompose_kanboard_bind_mountpoints:
   - {location: '/kanboard/assets/', directory: '/var/www/app/assets'}
-ourcompose_kanboard_mariadb_script: |
+ourcompose_kanboard_mariadb_present: |
   CREATE USER IF NOT EXISTS 'kanboard'@'%' IDENTIFIED BY '{{ ourcompose_kanboard_backend_password }}';
   CREATE DATABASE IF NOT EXISTS kanboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   GRANT ALTER, CREATE, DELETE, DROP, INDEX, INSERT, REFERENCES, SELECT, UPDATE ON kanboard.* TO 'kanboard'@'%';
+ourcompose_kanboard_mariadb_absent: |
+  DROP USER IF EXISTS 'kanboard'@'%';
+  DROP DATABASE IF EXISTS kanboard;
 ourcompose_kanboard_healthcheck: |
   curl -sSL --fail localhost/kanboard \
   && curl -L --fail --insecure nginx/kanboard/assets/img/favicon.png \

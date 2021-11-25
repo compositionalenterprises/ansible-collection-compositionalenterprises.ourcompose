@@ -1,0 +1,14 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) The callback project is absented
+  community.docker.docker_container:
+    name: callback
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: local/callback
+    state: absent
+    force_absent: yes

@@ -1,0 +1,29 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) Remove the service's tables from mariadb
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_portal_mariadb_absent }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (absent) The portal project is absented
+  community.docker.docker_container:
+    name: portal
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: compositionalenterprises/portal
+    state: absent
+    force_absent: yes
+
+- name: (absent) Remove the host bind mount volumes
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/srv/{{ ourcompose_portal_storage }}/portal_storage/"
+    - "/srv/{{ ourcompose_portal_storage }}/portal_credentials/"
+    - "/srv/{{ ourcompose_nginx_storage }}/nginx_logs/"
