@@ -4,13 +4,6 @@
     src: "nginx_firefly.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/firefly.conf"
 
-- name: (present) The mariadb database service is up and initialized
-  # We're running a while loop to check to ensure that the mariadb database has
-  # initialized:
-  #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking
-  shell: 'docker exec -i mariadb bash -c "while mysql -uroot -p{{ ourcompose_common_database_root_password }} -e \"SHOW DATABASES;\" 2>&1 | grep -e \"ERROR 2002\|ERROR 1045\"; do sleep 1; done; echo \"SHOW DATABASES SUCCEEDED\""'
-  no_log: "{{ ourcompose_common_no_log }}"
-
 - name: (present) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_firefly_mariadb_present }}"
   args:
