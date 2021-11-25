@@ -4,4 +4,4 @@
     ourcompose_nginx_storage: "{{ ourcompose_nginx_storage }}"
     ourcompose_nginx_html_dir: "{{ ourcompose_nginx_html_dir }}"
 
-- include_tasks: "./present.yml"
+- include_tasks: "./{{ ourcompose_nginx_state }}.yml"

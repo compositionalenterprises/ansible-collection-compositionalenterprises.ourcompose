@@ -1,5 +1,4 @@
 ---
-ourcompose_mariadb_pull: 'yes'
 ourcompose_mariadb_state: 'present'
 ourcompose_mariadb_version: '10.5'
 ourcompose_mariadb_storage: 'local'

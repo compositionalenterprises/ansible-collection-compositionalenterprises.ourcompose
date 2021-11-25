@@ -1,0 +1,5 @@
+---
+- name: (stopped) The container is stopped
+  community.docker.docker_container:
+    name: nginx
+    state: stopped

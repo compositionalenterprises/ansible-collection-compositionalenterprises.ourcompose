@@ -1,5 +1,4 @@
 ---
-ourcompose_commandcenter_pull: yes
 ourcompose_commandcenter_state: present
 ourcompose_commandcenter_version: '1.15.0'
 ourcompose_commandcenter_storage: 'local'
@@ -9,9 +8,12 @@ ourcompose_commandcenter_admin_password: 'testpassword'
 ourcompose_commandcenter_backend_password: 'testpassword'
 ourcompose_commandcenter_bind_mountpoints:
   - {location: '/commandcenter/packs/', directory: '/app/public/packs'}
-ourcompose_commandcenter_mariadb_script: |
+ourcompose_commandcenter_mariadb_present: |
   CREATE DATABASE IF NOT EXISTS commandcenter;
   GRANT ALL PRIVILEGES ON commandcenter.* TO 'commandcenter'@'%' IDENTIFIED BY '{{ ourcompose_commandcenter_backend_password }}';
+ourcompose_commandcenter_mariadb_absent: |
+  DROP USER IF EXISTS 'commandcenter'@'%';
+  DROP DATABASE IF EXISTS commandcenter;
 ourcompose_commandcenter_healthcheck: |
   wget --quiet --no-verbose --tries=1 --spider localhost:3000/commandcenter \
   && wget --quiet --no-verbose --tries=1 --no-check-certificate --spider nginx$$(wget --quiet --no-verbose --tries=1 localhost:3000/commandcenter -O - | grep -oe "[A-Za-z0-9/_-]\+.css" | head -n 1 | sed 's/^{{ ourcompose_common_domain.split(".")[-1] }}//') \

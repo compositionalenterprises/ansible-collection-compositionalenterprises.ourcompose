@@ -16,7 +16,7 @@
   failed_when: False
   register: ourcompose_bitcoind_existing
 
-- name: (present) The latest bitcoind service is built and {{ ourcompose_bitcoind_state }}
+- name: (present) The latest bitcoind service is {% if not ourcompose_bitcoind_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: bitcoind
     definition:
@@ -36,7 +36,7 @@
               interval: 5s
               timeout: 30s
               retries: 3
-    pull: "{{ ourcompose_bitcoind_pull }}"
+    pull: yes
     state: "{{ ourcompose_bitcoind_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

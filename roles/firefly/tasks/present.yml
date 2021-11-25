@@ -12,7 +12,7 @@
   no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (present) Set up the mariadb database
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_firefly_mariadb_script }}"
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_firefly_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
@@ -23,7 +23,7 @@
   failed_when: False
   register: ourcompose_firefly_existing
 
-- name: (present) The latest firefly service is built and {{ ourcompose_firefly_state }}
+- name: (present) The latest firefly service is {% if not ourcompose_firefly_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: firefly
     definition:
@@ -60,7 +60,7 @@
           external: true
         backend:
           external: true
-    pull: "{{ ourcompose_firefly_pull }}"
+    pull: yes
     state: "{{ ourcompose_firefly_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

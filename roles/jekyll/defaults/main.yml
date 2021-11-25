@@ -1,5 +1,4 @@
 ---
-ourcompose_jekyll_pull: yes
 ourcompose_jekyll_state: present
 ourcompose_jekyll_version: '4.1.0'
 ourcompose_jekyll_storage: 'local'

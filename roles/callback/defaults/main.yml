@@ -1,5 +1,4 @@
 ---
-ourcompose_callback_build: yes
 ourcompose_callback_state: present
 ourcompose_callback_user: 'callback'
 ourcompose_callback_keys: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH3SjErcNvuc+lAJcW1c3wS/MFTGoD8csf9/WFZT8Htd'

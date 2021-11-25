@@ -1,0 +1,19 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) The bitcoind project is absented
+  community.docker.docker_container:
+    name: bitcoind
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: zquestz/bitcoin-unlimited
+    state: absent
+    force_absent: yes
+
+- name: (absent) Remove the volumes
+  file:
+    path: "/srv/{{ ourcompose_bitcoind_storage }}/bitcoind_data"
+    state: absent

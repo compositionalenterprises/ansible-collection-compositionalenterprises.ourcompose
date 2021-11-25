@@ -1,6 +1,8 @@
 ---
 dependencies:
   - compositionalenterprises.ourcompose.common
-  - compositionalenterprises.ourcompose.nginx
+  - role: compositionalenterprises.ourcompose.nginx
+    when: ourcompose_portal_state == 'present'
   - role: compositionalenterprises.ourcompose.mariadb
     ourcompose_mariadb_restarted: false
+    when: ourcompose_portal_state != 'stopped'

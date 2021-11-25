@@ -55,7 +55,7 @@
   no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (present) Set up the MariaDB database
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_portal_mariadb_script }}"
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_portal_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
@@ -95,7 +95,7 @@
 
 - name: Deploy Container
   block:
-    - name: (present) The latest portal service is built and {{ ourcompose_portal_state }}
+    - name: (present) The latest portal service is {% if not ourcompose_portal_existing['rc'] %}re{% endif %}started
       docker_compose:
         project_name: portal
         definition:
@@ -141,7 +141,7 @@
                   external: true
               backend:
                   external: true
-        pull: "{{ ourcompose_portal_pull }}"
+        pull: yes
         state: "{{ ourcompose_portal_state }}"
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.
@@ -153,7 +153,7 @@
     - name: (present) Forcibly clean the docker cache
       command: docker system prune -a -f
 
-    - name: (present) The latest portal service is built and {{ ourcompose_portal_state }}
+    - name: (present) The latest portal service is {% if not ourcompose_portal_existing['rc'] %}re{% endif %}started
       docker_compose:
         project_name: portal
         definition:
@@ -199,7 +199,7 @@
                   external: true
               backend:
                   external: true
-        pull: "{{ ourcompose_portal_pull }}"
+        pull: yes
         state: "{{ ourcompose_portal_state }}"
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.

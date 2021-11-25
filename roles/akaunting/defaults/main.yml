@@ -1,6 +1,5 @@
 ---
-ourcompose_akaunting_pull: yes
-ourcompose_akaunting_state: present
+ourcompose_akaunting_state: 'present'
 ourcompose_akaunting_version: '2.1.25'
 ourcompose_akaunting_storage: 'local'
 ourcompose_akaunting_backend_password: 'testpassword'
@@ -12,10 +11,13 @@ ourcompose_akaunting_bind_mountpoints:
   - {location: '/akaunting/public/img/', directory: '/var/www/html/public/img'}
   - {location: '/akaunting/public/vendor/', directory: '/var/www/html/public/vendor'}
   - {location: '/akaunting/public/js/', directory: '/var/www/html/public/js'}
-ourcompose_akaunting_mariadb_script: |
+ourcompose_akaunting_mariadb_present: |
   CREATE USER IF NOT EXISTS 'akaunting'@'%' IDENTIFIED BY '{{ ourcompose_akaunting_backend_password }}';
   CREATE DATABASE IF NOT EXISTS akaunting;
   GRANT ALL PRIVILEGES ON akaunting.* TO 'akaunting'@'%' IDENTIFIED BY '{{ ourcompose_akaunting_backend_password }}';
+ourcompose_akaunting_mariadb_absent: |
+  DROP USER IF EXISTS 'akaunting'@'%';
+  DROP DATABASE IF EXISTS akaunting;
 ourcompose_akaunting_healthcheck: |
   wget --quiet --no-verbose --tries=1 --spider localhost:80 \
   && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate nginx$$(wget --quiet --no-verbose --tries=1 localhost:3000/portal -O - | grep -oe "[A-Za-z0-9/_-]\+.css" | head -n 1 | sed 's/^{{ ourcompose_common_domain.split(".")[-1] }}//') \

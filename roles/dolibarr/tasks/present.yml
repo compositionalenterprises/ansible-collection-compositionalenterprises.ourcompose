@@ -12,7 +12,7 @@
   no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (present) Set up the mariadb database
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_dolibarr_mariadb_script }}"
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_dolibarr_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
@@ -23,7 +23,7 @@
   failed_when: False
   register: ourcompose_dolibarr_existing
 
-- name: (present) The latest dolibarr service is built and {{ ourcompose_dolibarr_state }}
+- name: (present) The latest dolibarr service is {% if not ourcompose_dolibarr_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: dolibarr
     definition:
@@ -64,7 +64,7 @@
               external: true
       volumes:
         nginx:
-    pull: "{{ ourcompose_dolibarr_pull }}"
+    pull: yes
     state: "{{ ourcompose_dolibarr_state }}"
     restarted: "{{ not ourcompose_dolibarr_existing['rc'] }}"
     timeout: 200

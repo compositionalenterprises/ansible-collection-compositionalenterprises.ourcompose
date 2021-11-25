@@ -1,5 +1,4 @@
 ---
-ourcompose_bitcoind_pull: yes
 ourcompose_bitcoind_state: present
 ourcompose_bitcoind_version: '1.9.1.1'
 ourcompose_bitcoind_storage: 'local'

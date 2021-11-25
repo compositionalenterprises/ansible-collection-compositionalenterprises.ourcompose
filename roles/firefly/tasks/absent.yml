@@ -1,0 +1,28 @@
+---
+- name: (absent) Stop the container before removing it
+  include_tasks: stopped.yml
+
+- name: (absent) Remove the service's tables from mariadb
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_firefly_mariadb_absent }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
+
+- name: (absent) The firefly project is absented
+  community.docker.docker_container:
+    name: firefly
+    state: absent
+
+- name: (absent) Remove the docker image
+  community.docker.docker_image:
+    name: fireflyiii/core
+    state: absent
+    force_absent: yes
+
+- name: (absent) Remove the host bind mount volumes
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/srv/{{ ourcompose_firefly_storage }}/firefly_export"
+    - "/srv/{{ ourcompose_firefly_storage }}/firefly_upload"

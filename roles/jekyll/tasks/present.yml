@@ -24,7 +24,7 @@
   failed_when: False
   register: ourcompose_jekyll_existing
 
-- name: (present) The latest jekyll service is built and {{ ourcompose_jekyll_state }}
+- name: (present) The latest jekyll service is {% if not ourcompose_jekyll_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: jekyll
     definition:
@@ -59,7 +59,7 @@
       networks:
           frontend:
               external: true
-    pull: "{{ ourcompose_jekyll_pull }}"
+    pull: yes
     state: "{{ ourcompose_jekyll_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

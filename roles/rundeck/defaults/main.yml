@@ -1,5 +1,4 @@
 ---
-ourcompose_rundeck_pull: yes
 ourcompose_rundeck_state: present
 ourcompose_rundeck_version: '3.3.14'
 ourcompose_rundeck_storage: 'local'
@@ -8,10 +7,13 @@ ourcompose_rundeck_backend_password: 'testpassword'
 ourcompose_rundeck_api_tokens_duration_max: '0'
 ourcompose_rundeck_bind_mountpoints:
   - {location: '/rundeck/assets/', directory: '/home/rundeck/assets'}
-ourcompose_rundeck_mariadb_script: |
+ourcompose_rundeck_mariadb_present: |
   CREATE USER IF NOT EXISTS 'rundeck'@'%' IDENTIFIED BY '{{ ourcompose_rundeck_backend_password }}';
   CREATE DATABASE IF NOT EXISTS rundeck;
   GRANT ALL PRIVILEGES ON rundeck.* TO 'rundeck'@'%';
+ourcompose_rundeck_mariadb_absent: |
+  DROP USER IF EXISTS 'rundeck'@'%';
+  DROP DATABASE IF EXISTS rundeck;
 ourcompose_rundeck_additional_setup: |
   echo "Hello, World!"
   echo "Command number 2"

@@ -14,10 +14,9 @@
   failed_when: False
   register: ourcompose_mariadb_existing
 
-- name: (present) The latest mariadb service is built and present
+- name: (present) The latest mariadb service is {% if not ourcompose_mariadb_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: mariadb
-    timeout: 60
     definition:
       version: '3.6'
       services:
@@ -40,7 +39,7 @@
       networks:
           backend:
               name: backend
-    pull: "{{ ourcompose_mariadb_pull }}"
+    pull: yes
     state: "{{ ourcompose_mariadb_state }}"
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.

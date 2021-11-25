@@ -1,5 +1,4 @@
 ---
-ourcompose_bitwarden_pull: yes
 ourcompose_bitwarden_state: present
 ourcompose_bitwarden_version: '1.21.0'
 ourcompose_bitwarden_storage: 'local'
