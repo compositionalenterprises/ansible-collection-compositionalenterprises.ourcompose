@@ -31,6 +31,9 @@
               image: "akaunting/akaunting:{{ compositional_akaunting_version }}"
               container_name: akaunting
               restart: always
+              volumes:
+                - "/srv/{{ compositional_akaunting_storage }}/akaunting_storage:/var/www/html/storage"
+                - "/srv/{{ compositional_akaunting_storage }}/akaunting_modules:/var/www/html/modules"
               networks:
                 - frontend
                 - backend
