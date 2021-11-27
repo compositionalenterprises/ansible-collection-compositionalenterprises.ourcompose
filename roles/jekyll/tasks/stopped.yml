@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: jekyll
     state: stopped
+  when: ourcompose_jekyll_state != 'absent'

@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: firefly
     state: stopped
+  when: ourcompose_firefly_state != 'absent'

@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: bitwarden
     state: stopped
+  when: ourcompose_bitwarden_state != 'absent'

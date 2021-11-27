@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: bitcoind
     state: stopped
+  when: ourcompose_bitcoind_state != 'absent'

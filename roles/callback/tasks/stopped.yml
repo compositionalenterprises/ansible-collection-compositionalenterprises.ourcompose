@@ -3,3 +3,4 @@
   community.docker.docker_container:
     name: callback
     state: stopped
+  when: ourcompose_callback_state != 'absent'

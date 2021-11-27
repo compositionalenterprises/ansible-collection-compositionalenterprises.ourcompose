@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: wordpress
     state: stopped
+  when: ourcompose_wordpress_state != 'absent'

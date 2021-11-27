@@ -3,3 +3,4 @@
   community.docker.docker_container:
     name: nginx
     state: stopped
+  when: ourcompose_nginx_state != 'absent'

@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: commandcenter
     state: stopped
+  when: ourcompose_commandcenter_state != 'absent'

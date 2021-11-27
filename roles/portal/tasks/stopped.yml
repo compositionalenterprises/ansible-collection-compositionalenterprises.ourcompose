@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: portal
     state: stopped
+  when: ourcompose_portal_state != 'absent'

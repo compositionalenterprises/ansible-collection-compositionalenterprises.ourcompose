@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: bookstack
     state: stopped
+  when: ourcompose_bookstack_state != 'absent'

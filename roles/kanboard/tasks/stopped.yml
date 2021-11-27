@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: kanboard
     state: stopped
+  when: ourcompose_kanboard_state != 'absent'
