@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: nextcloud
     state: stopped
+  when: ourcompose_nextcloud_state != 'absent'

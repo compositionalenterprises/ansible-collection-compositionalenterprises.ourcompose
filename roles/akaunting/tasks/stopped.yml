@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: akaunting
     state: stopped
+  when: ourcompose_akaunting_state != 'absent'

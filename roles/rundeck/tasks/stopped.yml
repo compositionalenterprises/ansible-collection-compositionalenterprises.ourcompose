@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: rundeck
     state: stopped
+  when: ourcompose_rundeck_state != 'absent'

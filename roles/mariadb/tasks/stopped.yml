@@ -3,3 +3,4 @@
   community.docker.docker_container:
     name: mariadb
     state: stopped
+  when: ourcompose_mariadb_state != 'absent'

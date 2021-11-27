@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: dolibarr
     state: stopped
+  when: ourcompose_dolibarr_state != 'absent'

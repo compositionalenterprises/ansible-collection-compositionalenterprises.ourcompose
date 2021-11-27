@@ -12,3 +12,4 @@
   community.docker.docker_container:
     name: suitecrm
     state: stopped
+  when: ourcompose_suitecrm_state != 'absent'

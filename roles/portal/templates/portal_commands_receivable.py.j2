@@ -151,6 +151,12 @@ def build_container_image(collection_version, build_target):
         # from the string like 'v3.2.1'
         oc_mgmt_branch = 'stable-' + collection_version[1]
         oc_mgmt_maj_ver = collection_version[1]
+    elif collection_version == 'master':
+        # This is special for master. And we can't test with the branch
+        # versioning like below, because in galaxy.yml, master is pegged
+        # at 0.0.0. So right now we just hardcode it.
+        oc_mgmt_branch = 'stable-3'
+        oc_mgmt_maj_ver = '3'
     elif collection_version.startswith('stable'):
         # This gets the stable major version from the tag that is
         # targeting the 'stable-3.2' type string
