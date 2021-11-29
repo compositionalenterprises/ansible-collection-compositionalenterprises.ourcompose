@@ -2,12 +2,6 @@
 - name: (absent) Stop the container before removing it
   include_tasks: stopped.yml
 
-- name: (absent) Remove the service's tables from mariadb
-  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_bookstack_mariadb_absent }}"
-  args:
-    executable: '/bin/bash'
-  no_log: "{{ ourcompose_common_no_log }}"
-
 - name: (absent) The bookstack project is absented
   community.docker.docker_container:
     name: bookstack
@@ -18,6 +12,12 @@
     name: solidnerd/bookstack
     state: absent
     force_absent: yes
+
+- name: (absent) Remove the service's tables from mariadb
+  shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_bookstack_mariadb_absent }}"
+  args:
+    executable: '/bin/bash'
+  no_log: "{{ ourcompose_common_no_log }}"
 
 - name: (absent) Remove the host bind mount volumes
   file:

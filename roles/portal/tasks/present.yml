@@ -19,6 +19,21 @@
     state: present
     key: "{{ ourcompose_portal_crpubkey['content'] | b64decode }}"
 
+- name: (present) Ensure that commands_receivable isn't currently running
+  service_facts:
+  register: ourcompose_portal_service_facts
+  # Here we do the default, because if c_r hasn't been set up yet,
+  # we need to just keep on going so it can be set up later. Otherwise,
+  # it's probably in a state of building the container now, which means that
+  # we have to wait until we continue on to place the new executable files
+  # and restart the service
+  until: ourcompose_portal_service_facts['ansible_facts']['services']['commands_receivable.service']['state'] | default('stopped', true) in ['stopped', 'inactive']
+  retries: 30
+  delay: 30
+  # We only want to do this when we are going to be restarting the socket,
+  # as that is what we have been having issues with.
+  when: ourcompose_portal_restarted
+
 - name: (present) Commands receivable executable is deployed
   template:
     src: '../templates/portal_commands_receivable.py.j2'
@@ -97,6 +112,7 @@
               portal:
                   image: "compositionalenterprises/portal:{{ ourcompose_portal_version }}"
                   container_name: portal
+                  init: true
                   restart: always
                   volumes:
                       - "/srv/{{ ourcompose_portal_storage }}/portal_storage/:/app/storage/"
@@ -155,6 +171,7 @@
               portal:
                   image: "compositionalenterprises/portal:{{ ourcompose_portal_version }}"
                   container_name: portal
+                  init: true
                   restart: always
                   volumes:
                       - "/srv/{{ ourcompose_portal_storage }}/portal_storage/:/app/storage/"
