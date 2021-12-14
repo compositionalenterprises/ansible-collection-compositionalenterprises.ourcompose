@@ -104,6 +104,7 @@
           services:
               portal:
                   image: "compositionalenterprises/portal:{{ compositional_portal_version }}"
+                  init: true
                   container_name: portal
                   restart: always
                   volumes:
@@ -162,6 +163,7 @@
           services:
               portal:
                   image: "compositionalenterprises/portal:{{ compositional_portal_version }}"
+                  init: true
                   container_name: portal
                   restart: always
                   volumes:
