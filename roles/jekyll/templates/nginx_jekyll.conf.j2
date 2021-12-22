@@ -1,17 +1,21 @@
+{# TODO: Can I get away with hardcoding this? We can then do away with bind mountpoints for jekyll #}
 {% for bind_mountpoint in ourcompose_jekyll_bind_mountpoints %}
 location {{ bind_mountpoint['location'] }} {
     access_log /var/log/nginx/services/jekyll_{{ bind_mountpoint['location'].split('/')[-2] }}_access.log;
+    {# 
+    Here we're putting together the content security policy for this server. This is done by
+    iterating of a dict of lists. The dict keys are the CSP titles, and the lists in those dicts
+    are the values for those CSP keys.
+
+    One catch here is that they all need to be quoted except for anything with a colon, such as
+    data: or https:// stuff.
+
+    This will default to a setup that works with the original jekyll setup, but any other one,
+    for example, ourcompose.com that uses podigee as an external source, needs to have other
+    security policies in place in order to deal with its own idiosyncrasies.
+    #}
+    add_header Content-Security-Policy "{% for src in ourcompose_jekyll_csp.keys() %}{{ src }}{% for policy in ourcompose_jekyll_csp[src] %}{% if ':' in policy %} {{ policy }}{% else %} '{{ policy }}'{% endif %}{% endfor %}; {% endfor %}" always;
+    default_type text/html;
+    charset utf-8;
 }
 {% endfor %}
-
-location /jekyll/ {
-    access_log /var/log/nginx/services/jekyll_main_access.log;
-    proxy_headers_hash_max_size 512;
-    proxy_headers_hash_bucket_size 64;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    add_header Front-End-Https on;
-    proxy_pass http://jekyll:{{ ourcompose_jekyll_port }}/jekyll/;
-}
