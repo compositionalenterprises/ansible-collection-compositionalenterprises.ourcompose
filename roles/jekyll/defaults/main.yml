@@ -40,3 +40,14 @@ ourcompose_jekyll_healthcheck: |
     && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate nginx/$${path} \
   {% endif %} \
   || exit 1
+compositional_jekyll_csp:
+  default-src:
+  - 'none'
+  script-src:
+  - 'self'
+  connect-src:
+  - 'self'
+  img-src:
+  - 'self'
+  style-src:
+  - 'self'
