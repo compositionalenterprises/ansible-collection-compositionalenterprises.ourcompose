@@ -212,12 +212,21 @@ compositional_jekyll_port: '8080'
 compositional_jekyll_git_url: 'https://github.com/volny/creative-theme-jekyll.git'
 compositional_jekyll_git_branch: 'master'
 compositional_jekyll_bind_mountpoints:
-  - {location: '/jekyll/font-awesome/fonts/', directory: '/srv/{{ compositional_jekyll_storage }}/jekyll_jekyll/font-awesome/fonts'}
-  - {location: '/jekyll/img/', directory: '/srv/{{ compositional_jekyll_storage }}/jekyll_jekyll/img'}
-  - {location: '/jekyll/js/', directory: '/srv/{{ compositional_jekyll_storage }}/jekyll_jekyll/js'}
+  - {location: '/jekyll/', directory: '/srv/{{ compositional_jekyll_storage }}/jekyll_jekyll/_site'}
 compositional_jekyll_extra_commands: |
   echo "Hello, World!"
   echo "Command number 2"
+compositional_jekyll_csp:
+  default-src:
+  - 'none'
+  script-src:
+  - 'self'
+  connect-src:
+  - 'self'
+  img-src:
+  - 'self'
+  style-src:
+  - 'self'
 # With this healthcheck we are doing two things. The first thing is to check the root jekyll page.
 # The second thing is a bit more involved. We are getting that page again, and checking for the first path
 # to an image. Once we get the path to that image, we try to get that image to make sure that the reverse
