@@ -1,6 +1,6 @@
 ---
 ourcompose_portal_state: 'running'
-ourcompose_portal_version: '1.12.1'
+ourcompose_portal_version: 'stable-4'
 ourcompose_portal_storage: 'local'
 ourcompose_portal_restarted: 'yes'
 ourcompose_portal_role_branch: 'master'
