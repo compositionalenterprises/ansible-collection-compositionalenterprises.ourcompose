@@ -7,23 +7,23 @@
     - "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d"
     - "/srv/{{ ourcompose_nginx_storage }}/nginx_html"
 
-- name: (present) Nginx default.conf is deployed
+- name: (running) Nginx default.conf is deployed
   template:
     src: nginx_default.conf.j2
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/default.conf"
 
-- name: (present) Nginx robots.txt is deployed
+- name: (running) Nginx robots.txt is deployed
   template:
     src: nginx_robots.txt.j2
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_html/robots.txt"
 
-- name: (present) Determine whether the nginx service is existing yet
+- name: (running) Determine whether the nginx service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep nginx
   failed_when: False
   register: ourcompose_nginx_existing
 
-- name: (present) The latest nginx service is {% if not ourcompose_nginx_existing['rc'] and ourcompose_nginx_restarted %}re{% endif %}started
+- name: (running) The latest nginx service is {% if not ourcompose_nginx_existing['rc'] and ourcompose_nginx_restarted %}re{% endif %}started
   docker_compose:
     project_name: nginx
     definition:
@@ -52,7 +52,7 @@
           frontend:
               name: frontend
     pull: yes
-    state: "{{ ourcompose_nginx_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_nginx_existing['rc'] and ourcompose_nginx_restarted }}"
@@ -60,22 +60,22 @@
   register: frontend_output
 
 # TODO: This would be nice to avoid having errors in nginx setup if the services are breaking
-#- name: (present) Services directory is empty
+#- name: (running) Services directory is empty
 #  shell:
 #    cmd: "rm -rf /srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/*"
 
-- name: (present) Check for domain redirects' certs
+- name: (running) Check for domain redirects' certs
   stat:
     path: "{{ ourcompose_common_cert_volume.split(':')[0] }}/{{ item['cert'] }}"
   loop: "{{ ourcompose_common_domain_redirects }}"
   register: ourcompose_common_domain_redirects_certs_stat
 
-- name: (present) Add certs key-value to domain redirects certs dict
+- name: (running) Add certs key-value to domain redirects certs dict
   set_fact:
     ourcompose_nginx_domain_redirects_certs: "{{ ourcompose_nginx_domain_redirects_certs | default({}) | combine({item['item']['domain']: item['stat']['exists']}) }}"
   loop: "{{ ourcompose_common_domain_redirects_certs_stat['results'] }}"
 
-- name: (present) Services directory is created
+- name: (running) Services directory is created
   file:
     path: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}"
     state: directory

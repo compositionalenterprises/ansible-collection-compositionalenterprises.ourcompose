@@ -1,10 +1,10 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_rundeck.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/rundeck.conf"
 
-- name: (present) Persistant storage directories are provisioned
+- name: (running) Persistant storage directories are provisioned
   file:
     path: "{{ item }}"
     owner: 1000
@@ -16,19 +16,19 @@
     - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_logs"
     - "/srv/{{ ourcompose_rundeck_storage }}/rundeck_etc"
 
-- name: (present) Set up the mariadb database
+- name: (running) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_rundeck_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the rundeck service is existing yet
+- name: (running) Determine whether the rundeck service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep rundeck
   failed_when: False
   register: ourcompose_rundeck_existing
 
-- name: (present) The latest rundeck service is {% if not ourcompose_rundeck_existing['rc'] %}re{% endif %}started
+- name: (running) The latest rundeck service is {% if not ourcompose_rundeck_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: rundeck
     definition:
@@ -70,14 +70,21 @@
           backend:
               external: true
     pull: yes
-    state: "{{ ourcompose_rundeck_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_rundeck_existing['rc'] }}"
     timeout: 200
   register: ourcompose_rundeck_output
 
-- name: (present) Run additional setup commands in rundeck container
+- name: (running) Wait for rundeck to have been restarted
+  shell: docker logs --since 6m rundeck | grep 'Grails application running'
+  register: ourcompose_rundeck_server_running
+  until: ourcompose_rundeck_server_running['rc'] == 0
+  retries: 72
+  delay: 5
+
+- name: (running) Run additional setup commands in rundeck container
   shell: docker exec -u 0 -i rundeck bash -c "{{ ourcompose_rundeck_additional_setup }}"
   args:
     executable: '/bin/bash'
@@ -86,7 +93,7 @@
 #
 # Workaround for https://github.com/rundeck/rundeck/issues/5344
 #
-- name: (present) Register presence of property files
+- name: (running) Register presence of property files
   stat:
     path: "/srv/{{ ourcompose_rundeck_storage }}/rundeck_{{ item.split('/')[0] }}/{{ item.split('/')[1] }}"
   loop:
@@ -101,7 +108,7 @@
     - 'etc/project.properties'
   register: ourcompose_rundeck_property_files
 
-- name: (present) Copy initial property files to server
+- name: (running) Copy initial property files to server
   copy:
     src: "../files/rundeck_{{ item['item'].split('/')[1] }}"
     dest: "/srv/{{ ourcompose_rundeck_storage }}/rundeck_{{ item['item'].split('/')[0] }}/{{ item['item'].split('/')[1] }}"
@@ -114,17 +121,20 @@
 #
 # Bind Mountpoints
 #
-- name: (present) Install unzip in rundeck container
+- name: (running) Install unzip in rundeck container
   shell: docker exec -u 0 -i rundeck bash -c "apt update && apt install unzip"
   args:
     executable: '/bin/bash'
 
-- name: (present) Unzip assets directory from the rundeck WAR file
-  shell: docker exec -i rundeck bash -c "unzip -o rundeck.war 'assets/*'"
+- name: (running) Unzip assets directory from the rundeck WAR file
+  # We are extracting into the etc/ directory, which is a persistent directory
+  # so that we can bind mount from a location in /etc, rather than having to bind
+  # mount from the MergedDir
+  shell: docker exec -i rundeck bash -c "unzip -od etc/ rundeck.war 'assets/*'"
   args:
     executable: '/bin/bash'
 
-- name: (present) Reset the bind mountpoints in order to get Kanboard healthy
+- name: (running) Reset the bind mountpoints in order to get Kanboard healthy
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -134,7 +144,7 @@
 #
 # Admin Password
 #
-- name: (present) Set admin password in realm.properties
+- name: (running) Set admin password in realm.properties
   lineinfile:
     line: 'admin:{{ ourcompose_rundeck_admin_password }},user,admin'
     path: "/srv/{{ ourcompose_rundeck_storage }}/rundeck_config/realm.properties"

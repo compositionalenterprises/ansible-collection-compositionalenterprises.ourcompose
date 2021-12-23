@@ -1,6 +1,6 @@
 ---
-ourcompose_bitwarden_state: present
-ourcompose_bitwarden_version: '1.21.0'
+ourcompose_bitwarden_state: 'running'
+ourcompose_bitwarden_version: '1.22.2'
 ourcompose_bitwarden_storage: 'local'
 ourcompose_bitwarden_admin_password: 'testpassword'
 ourcompose_bitwarden_admin_token: 'testpassword'

@@ -1,22 +1,22 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_nextcloud.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/nextcloud.conf"
 
-- name: (present) Set up the mariadb database
+- name: (running) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_nextcloud_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the nextcloud service is existing yet
+- name: (running) Determine whether the nextcloud service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep nextcloud
   failed_when: False
   register: ourcompose_nextcloud_existing
 
-- name: (present) The nextcloud service is {% if not ourcompose_nextcloud_existing['rc'] %}re{% endif %}started
+- name: (running) The nextcloud service is {% if not ourcompose_nextcloud_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: nextcloud
     definition:
@@ -53,7 +53,7 @@
           backend:
               external: true
     pull: yes
-    state: "{{ ourcompose_nextcloud_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_nextcloud_existing['rc'] }}"
@@ -64,42 +64,42 @@
 #
 # Install/Upgrade Nextcloud as necessary
 #
-- name: (present) Get nextcloud status
+- name: (running) Get nextcloud status
   shell: docker exec -u 33 -i nextcloud bash -c "curl -SL http://localhost/status.php"
   register: ourcompose_nextcloud_status_result
   until: ourcompose_nextcloud_status_result['stdout'].startswith('{')
   retries: 24
   delay: 5
 
-- name: (present) Create nextcloud status variable
+- name: (running) Create nextcloud status variable
   set_fact:
     ourcompose_nextcloud_status: "{{ ourcompose_nextcloud_status_result['stdout'] | from_json }}"
 
-- name: (present) Install Nextcloud
+- name: (running) Install Nextcloud
   shell: docker exec -u 33 -i nextcloud bash -c "./occ maintenance:install --admin-user 'admin' --admin-pass '{{ ourcompose_nextcloud_admin_password }}'"
   when: not ourcompose_nextcloud_status['installed']
 
-- name: (present) Upgrade Nextcloud DB
+- name: (running) Upgrade Nextcloud DB
   shell: 'docker exec -u 33 -i nextcloud bash -c "./occ upgrade --no-interaction"'
   when: ourcompose_nextcloud_status['needsDbUpgrade']
 
-- name: (present) Update Installed Applications
+- name: (running) Update Installed Applications
   shell: 'docker exec -u 33 -i nextcloud bash -c "./occ app:update --all"'
 
-- name: (present) Turn off maintenance moce
+- name: (running) Turn off maintenance moce
   shell: 'docker exec -u 33 -i nextcloud bash -c "./occ maintenance:mode --off"'
   when: ourcompose_nextcloud_status['maintenance']
 #
 # Set up config files
 #
-- name: (present) Make sure Nextcloud has fully initialized
+- name: (running) Make sure Nextcloud has fully initialized
   shell: 'docker exec -i nextcloud bash -c "ps -ef | grep apache2 | grep -ve grep -e entrypoint"'
   retries: 15
   delay: 15
   register: nextcloud_initialized
   until: nextcloud_initialized['rc'] == 0
 
-- name: (present) config.php is configured with overwritewebroot
+- name: (running) config.php is configured with overwritewebroot
   lineinfile:
     path: "/srv/{{ ourcompose_nextcloud_storage }}/nextcloud_config/config.php"
     insertafter: "overwrite.cli.url"
@@ -109,7 +109,7 @@
     - "  'overwriteprotocol' => 'https',"
   notify: restart_nextcloud
 
-- name: (present) config.php is configured with dbtableprefix
+- name: (running) config.php is configured with dbtableprefix
   lineinfile:
     path: "/srv/{{ ourcompose_nextcloud_storage }}/nextcloud_config/config.php"
     regexp: "dbtableprefix"
@@ -117,38 +117,38 @@
   when: ourcompose_nextcloud_legacy_dbtableprefix
   notify: restart_nextcloud
 
-- name: (present) Set up cron job for background tasks
+- name: (running) Set up cron job for background tasks
   cron:
     name: 'Nextcloud Background Tasks'
     minute: '*/5'
     job: '/usr/bin/docker exec -u 33 nextcloud php -f cron.php'
 
-- name: (present) Gather the list of applications present in the nextcloud instance
+- name: (running) Gather the list of applications present in the nextcloud instance
   shell:
     cmd: 'docker exec -iu 33 nextcloud bash -c "./occ app:list"'
   failed_when: False
   register: ourcompose_nextcloud_app_list
 
-- name: (present) Change the refresh period of calendar subscriptions
+- name: (running) Change the refresh period of calendar subscriptions
   shell:
     cmd: 'docker exec -iu 33 nextcloud bash -c "php occ config:app:set dav calendarSubscriptionRefreshRate --value \"P20M\""'
   when: "'calendar' in ourcompose_nextcloud_app_list['stdout']"
 
-- name: (present) Get trusted domains
+- name: (running) Get trusted domains
   shell: docker exec -u 33 -i nextcloud bash -c "php occ config:system:get trusted_domains"
   register: ourcompose_nextcloud_get_trusted_domains
 
-- name: (present) Add missing trusted domains
+- name: (running) Add missing trusted domains
   shell: docker exec -u 33 -i nextcloud bash -c "php occ config:system:set trusted_domains {{ item['number'] }} --value={{ item['domain'] }}"
   when: item['domain'] not in ourcompose_nextcloud_get_trusted_domains['stdout_lines']
   loop:
     - { number: "{{ ourcompose_nextcloud_get_trusted_domains['stdout_lines'] | length }}", domain: "{{ ourcompose_common_domain }}" }
     - { number: "{{ ourcompose_nextcloud_get_trusted_domains['stdout_lines'] | length + 1 }}", domain: 'nextcloud' }
 
-- name: (present) Flush handlers to restart nextcloud before setting up the bind mountpoints
+- name: (running) Flush handlers to restart nextcloud before setting up the bind mountpoints
   meta: flush_handlers
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:

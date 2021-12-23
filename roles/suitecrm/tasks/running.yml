@@ -1,24 +1,23 @@
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_suitecrm.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/suitecrm.conf"
 
-- name: (present) Set up the mariadb database
+- name: (running) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_suitecrm_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the suitecrm service is existing yet
+- name: (running) Determine whether the suitecrm service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep suitecrm
   failed_when: False
   register: ourcompose_suitecrm_existing
 
-- name: (present) The latest suitecrm service is {% if not ourcompose_suitecrm_existing['rc'] %}re{% endif %}started
+- name: (running) The latest suitecrm service is {% if not ourcompose_suitecrm_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: suitecrm
-    timeout: 200
     definition:
       version: '3.6'
       services:
@@ -51,16 +50,15 @@
         backend:
           external: true
     pull: yes
-    state: "{{ ourcompose_suitecrm_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_suitecrm_existing['rc'] }}"
     timeout: 200
   register: ourcompose_suitecrm_output
-  notify: 'Restart Frontend'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Wait for suitecrm to initialize its setup routines
+- name: (running) Wait for suitecrm to initialize its setup routines
   shell:
     cmd: docker logs --since 6m suitecrm 2>&1 | grep '** SuiteCRM setup finished! **'
   register: ourcompose_suitecrm_server_running
@@ -68,10 +66,10 @@
   retries: 12
   delay: 5
 
-- name: (present) Symlink suitecrm directory as a subdirectory
+- name: (running) Symlink suitecrm directory as a subdirectory
   shell: docker exec -iu 1 suitecrm bash -c "ln -snfT /bitnami/suitecrm /bitnami/suitecrm/suitecrm"
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -85,19 +83,19 @@
 # 
 #   /bitnami/suitecrm/vendor/consolidation/robo/robo create:user user10 testpassword true
 #
-- name: (present) Place the file into /tmp
+- name: (running) Place the file into /tmp
   copy:
     src: ../files/suitecrm_CreateUserCommands.php
     dest: /tmp/CreateUserCommands.php
 
-- name: (present) Copy the file into the docker container
+- name: (running) Copy the file into the docker container
   shell:
     cmd: docker cp /tmp/CreateUserCommands.php suitecrm:/bitnami/suitecrm/lib/Robo/Plugin/Commands
 
-- name: (present) Make robo executable
+- name: (running) Make robo executable
   shell:
     cmd: docker exec -i suitecrm chmod +x /bitnami/suitecrm/vendor/consolidation/robo/robo
 
-- name: (present) Make sure that Composer picks up the new files
+- name: (running) Make sure that Composer picks up the new files
   shell:
     cmd: docker exec -iw /bitnami/suitecrm suitecrm composer dump-autoload

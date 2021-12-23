@@ -1,5 +1,5 @@
 ---
-ourcompose_firefly_state: present
+ourcompose_firefly_state: 'running'
 ourcompose_firefly_version: 'version-5.5.13'
 ourcompose_firefly_storage: 'local'
 ourcompose_firefly_admin_password: 'testpassword1234'

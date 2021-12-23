@@ -1,22 +1,22 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_akaunting.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/akaunting.conf"
 
-- name: (present) Set up the mariadb
+- name: (running) Set up the mariadb
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_akaunting_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the akaunting service is existing yet
+- name: (running) Determine whether the akaunting service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep akaunting
   failed_when: False
   register: ourcompose_akaunting_existing
 
-- name: (present) Akaunting volumes for modules and storage are present
+- name: (running) Akaunting volumes for modules and storage are present
   file:
     state: directory
     path: "{{ item }}"
@@ -24,26 +24,20 @@
     - "/srv/{{ ourcompose_akaunting_storage }}/akaunting_storage"
     - "/srv/{{ ourcompose_akaunting_storage }}/akaunting_modules"
 
-- name: (present) Extract the default modules into the modules directory on the host
+- name: (running) Extract the default modules into the modules directory on the host
   block:
-    - name: (present) Copy the files out of the docker image
+    - name: (running) Copy the files out of the docker image
       shell:
         cmd: "docker create --name akaunting-tmp akaunting/akaunting:{{ ourcompose_akaunting_version }} && docker cp akaunting-tmp:/var/www/html/modules/. /srv/{{ ourcompose_akaunting_storage }}/akaunting_modules && docker rm akaunting-tmp"
 
-- name: (present) Stop the container before restarting it
-  include_tasks: stopped.yml
-  # if it's started, the rc will be 0, therefore, we XOR that so when it's started
-  # we pass a '1', which to ansible is True
-  when: "{{ not ourcompose_akaunting_existing['rc'] }}"
-
-- name: (present) Register the number of tables
+- name: (running) Register the number of tables
   shell: if [ $(docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "select count(*) as totaltables from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=\"akaunting\"" | tail -n 1) -gt 5 ]; then echo "HasTables"; else echo "MissingTables"; fi
   args: 
     executable: '/bin/bash'
   register: number_of_tables_status
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) The akaunting project is {% if not ourcompose_akaunting_existing['rc'] %}re{% endif %}started
+- name: (running) The akaunting project is {% if not ourcompose_akaunting_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: akaunting
     definition: 
@@ -69,6 +63,7 @@
                 ADMIN_PASSWORD: "{{ ourcompose_akaunting_admin_password }}"
                 PASSWORD: "{{ ourcompose_akaunting_admin_password }}"
                 AKAUNTING_SETUP: "{% if number_of_tables_status['stdout'] == 'MissingTables' %}true{% else %}false{% endif %}"
+                DB_PREFIX: 'ak_'
                 LOCALE: 'en-US'
                 COMPANY_NAME: "OurCompose"
                 COMPANY_EMAIL: "akaunting@{{ ourcompose_common_domain }}"
@@ -88,19 +83,19 @@
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_akaunting_existing['rc'] }}"
-    timeout: 200
+    timeout: 45
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Symlink akaunting directory
+- name: (running) Symlink akaunting directory
   shell: docker exec -i akaunting bash -c "ln -snfT /var/www/html/ /var/www/html/akaunting"
 
-- name: (present) Change Storage Permissions
+- name: (running) Change Storage Permissions
   shell: docker exec -it akaunting chmod -R 777 /var/www/html/storage/
   args: 
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:

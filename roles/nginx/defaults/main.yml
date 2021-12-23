@@ -1,5 +1,5 @@
 ---
-ourcompose_nginx_state: 'present'
+ourcompose_nginx_state: 'running'
 ourcompose_nginx_version: '1.17'
 ourcompose_nginx_storage: 'local'
 ourcompose_nginx_restarted: 'no'

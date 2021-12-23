@@ -9,7 +9,7 @@
 
 - name: (nginx) Register non-volume bind mountpoints
   set_fact:
-    ourcompose_bind_mountpoints_mounts: "{{ [{'location': item['item']['location'], 'directory': item['stdout'] + item['item']['directory']}] }}"
+    ourcompose_bind_mountpoints_mounts: "{{ ourcompose_bind_mountpoints_mounts + [{'location': item['item']['location'], 'directory': item['stdout'] + item['item']['directory']}] }}"
   when: not item['item']['directory'].startswith('/srv')
   loop: "{{ ourcompose_bind_mountpoints_src_dirs['results'] }}"
 

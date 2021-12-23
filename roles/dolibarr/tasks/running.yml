@@ -1,22 +1,22 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_dolibarr.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/dolibarr.conf"
 
-- name: (present) Set up the mariadb database
+- name: (running) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_dolibarr_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the dolibarr service is existing yet
+- name: (running) Determine whether the dolibarr service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep dolibarr
   failed_when: False
   register: ourcompose_dolibarr_existing
 
-- name: (present) The latest dolibarr service is {% if not ourcompose_dolibarr_existing['rc'] %}re{% endif %}started
+- name: (running) The latest dolibarr service is {% if not ourcompose_dolibarr_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: dolibarr
     definition:
@@ -58,20 +58,20 @@
       volumes:
         nginx:
     pull: yes
-    state: "{{ ourcompose_dolibarr_state }}"
+    state: present
     restarted: "{{ not ourcompose_dolibarr_existing['rc'] }}"
     timeout: 200
   register: ourcompose_dolibarr_output
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Wait for dolibarr to initialize
+- name: (running) Wait for dolibarr to initialize
   shell: docker logs --since 6m dolibarr 2>&1 | grep 'exec /usr/sbin/httpd -DFOREGROUND'
   register: ourcompose_dolibarr_server_running
   until: ourcompose_dolibarr_server_running['rc'] == 0
   retries: 72
   delay: 5
 
-- name: (present) Symlink dolibarr directory
+- name: (running) Symlink dolibarr directory
   shell: docker exec -i dolibarr bash -c "ln -snfT {{ item['target'] }} {{ item['link'] }}"
   loop:
     # First we link htdocs since that is the baseURL for apache to /var/www. That means
@@ -80,13 +80,13 @@
     # Then we link `/var/www/dolibarr` to `/var/www/html`, where the _actual_ app is stored.
     - {target: '/var/www/html', 'link': '/var/www/dolibarr'}
 
-- name: (present) Set up the admin API key in the database
+- name: (running) Set up the admin API key in the database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} dolibarr <<< "update llx_user set api_key = '{{ ourcompose_dolibarr_admin_api_key }}' where login = 'admin'"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:

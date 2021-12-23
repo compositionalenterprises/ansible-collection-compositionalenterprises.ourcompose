@@ -2,10 +2,10 @@
 dependencies:
   - compositionalenterprises.ourcompose.common
   - role: compositionalenterprises.ourcompose.nginx
-    when: ourcompose_firefly_state == 'present'
+    when: ourcompose_firefly_state == 'running'
   - role: compositionalenterprises.ourcompose.mariadb
     ourcompose_mariadb_restarted: false
     when: ourcompose_firefly_state != 'stopped'
   - role: compositionalenterprises.ourcompose.portal
     ourcompose_portal_restarted: false
-    when: ourcompose_firefly_state == 'present'
+    when: ourcompose_firefly_state == 'running'

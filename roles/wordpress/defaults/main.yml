@@ -1,5 +1,5 @@
 ---
-ourcompose_wordpress_state: present
+ourcompose_wordpress_state: 'running'
 ourcompose_wordpress_version: '5.7'
 ourcompose_wordpress_storage: 'local'
 ourcompose_wordpress_title: 'Wordpress Blog'

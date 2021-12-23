@@ -1,16 +1,16 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_bookstack.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/bookstack.conf"
 
-- name: (present) Set up the MySQL mariadb
+- name: (running) Set up the MySQL mariadb
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_bookstack_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Ensure bookstack volume directories exist and have correct ownership
+- name: (running) Ensure bookstack volume directories exist and have correct ownership
   file:
     path: "/srv/{{ ourcompose_bookstack_storage }}/bookstack_{{ item }}"
     owner: 33
@@ -21,13 +21,13 @@
     - 'uploads'
     - 'storage'
 
-- name: (present) Determine whether the bookstack service is existing yet
+- name: (running) Determine whether the bookstack service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep bookstack
   failed_when: False
   register: ourcompose_bookstack_existing
 
-- name: (present) The latest bookstack service is {% if not ourcompose_bookstack_existing['rc'] %}re{% endif %}started
+- name: (running) The latest bookstack service is {% if not ourcompose_bookstack_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: bookstack
     definition:
@@ -65,7 +65,7 @@
       volumes:
         nginx:
     pull: yes
-    state: "{{ ourcompose_bookstack_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_bookstack_existing['rc'] }}"
@@ -73,7 +73,7 @@
   register: ourcompose_bookstack_output
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Reset the bind mountpoints in order to get Kanboard healthy
+- name: (running) Reset the bind mountpoints in order to get Kanboard healthy
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -84,13 +84,13 @@
 #
 # Admin Password
 #
-- name: (present) Install Tinker
+- name: (running) Install Tinker
   shell: "
     docker exec -i bookstack bash -c '
       COMPOSER_MEMORY_LIMIT=-1 /var/www/bookstack/vendor/composer/composer/bin/composer require laravel/tinker'
     "
 
-- name: (present) Set the admin user's password
+- name: (running) Set the admin user's password
   # While it's crap that we have to use double escapes, it's the only way that bash doesn't throw
   # an error when passing the parenthesis.
   shell: "

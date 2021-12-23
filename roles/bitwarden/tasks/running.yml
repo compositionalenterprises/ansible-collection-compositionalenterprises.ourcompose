@@ -1,16 +1,16 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_bitwarden.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/bitwarden.conf"
 
-- name: (present) Determine whether the bitwarden service is existing yet
+- name: (running) Determine whether the bitwarden service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep bitwarden
   failed_when: False
   register: ourcompose_bitwarden_existing
 
-- name: (present) The latest bitwarden service is {% if not ourcompose_bitwarden_existing['rc'] %}re{% endif %}started
+- name: (running) The latest bitwarden service is {% if not ourcompose_bitwarden_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: bitwarden
     definition:
@@ -42,14 +42,14 @@
               external: true
 
     pull: yes
-    state: "{{ ourcompose_bitwarden_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_bitwarden_existing['rc'] }}"
     timeout: 200
   register: ourcompose_bitwarden_output
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -59,14 +59,14 @@
 #
 # Admin Password
 #
-- name: (present) Bitwarden is healthy
+- name: (running) Bitwarden is healthy
   shell: docker exec -i bitwarden bash -c "curl -sSL --fail localhost/bitwarden"
   register: ourcompose_bitwarden_health
   until: ourcompose_bitwarden_health['rc'] == 0
   retries: 24
   delay: 5
 
-- name: (present) Get the registration parameters
+- name: (running) Get the registration parameters
   script:
     cmd: "../files/bitwarden_registration_params.py
             -n Admin
@@ -93,7 +93,7 @@
       curl --header 'Content-Type: application/json' --request POST --data '{{ ourcompose_bitwarden_registration_params_result['stdout'].strip() }}' http://localhost/bitwarden/api/accounts/register
     mode: a+x
 
-- name: (present) Post the registration to the API URL
+- name: (running) Post the registration to the API URL
   shell: "
       docker exec -i bitwarden bash -c \"
         /data/admin_registration_command.sh
