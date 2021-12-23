@@ -2,7 +2,7 @@
   tasks:
   - shell: curl -fsSL https://get.docker.com -o get-docker.sh
   - shell: bash ./get-docker.sh
-  - shell: apt install python3-pip
+  - shell: apt install -y python3-pip socat jq
   - shell: pip3 install docker docker-compose
 
 - import_playbook: "compositionalenterprises.ourcompose.install_skeleton"
