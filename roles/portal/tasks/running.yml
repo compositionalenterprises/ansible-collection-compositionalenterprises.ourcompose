@@ -32,7 +32,7 @@
   delay: 30
   # We only want to do this when we are going to be restarting the socket,
   # as that is what we have been having issues with.
-  when: ourcompose_portal_restarted
+  when: ourcompose_portal_restarted and not (ourcompose_portal_allow_cr | bool)
 
 - name: (running) Commands receivable executable is deployed
   template:
@@ -40,7 +40,7 @@
     dest: '/usr/local/bin/commands_receivable.py'
     mode: '0744'
 
-- name: (running) Systemd service and socket file are deployed
+- name: (running) Commands receivable systemd service and socket file are deployed
   copy:
     src: "portal_commands_receivable.{{ item }}"
     dest: "/etc/systemd/system/commands_receivable.{{ item }}"
@@ -51,7 +51,8 @@
 - name: (running) systemd socket is started and enabled
   systemd:
     name: commands_receivable.socket
-    state: "{% if ourcompose_portal_restarted %}re{% endif %}started"
+    state: "{% if ourcompose_portal_restarted and not (ourcompose_portal_allow_cr | bool) %}re{% endif %}started"
+    enabled: yes
     daemon_reload: True
 
 #
@@ -276,3 +277,18 @@
   vars:
     ourcompose_bind_mountpoints_container: 'portal'
     ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_portal_bind_mountpoints }}"
+
+- name: (present) ourcompose_startup systemd restart service and script is placed
+  copy:
+    src: "../files/portal_ourcompose_startup.{{ item['src'] }}"
+    dest: "{{ item['dest_dir'] }}ourcompose_startup.{{ item['src'] }}"
+    mode: "{{ item['mode'] }}"
+  with_items:
+    - {src: 'sh', dest_dir: '/usr/local/bin/', mode: 'a+x'}
+    - {src: 'service', dest_dir: '/etc/systemd/system/', mode: '0655'}
+
+- name: (present) ourcompose_startup systemd socket is started and enabled
+  systemd:
+    name: ourcompose_startup.service
+    enabled: yes
+    daemon_reload: True

@@ -1,5 +1,6 @@
 [Socket]
 ListenStream=/var/run/commands_receivable.sock
+RemoveOnStop=true
 
 [Install]
 WantedBy=sockets.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Restart all ourcompose services after a host-level reboot
+After=docker.service
+After=commands_receivable.socket
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+StandardOutput=journal+console
+StandardError=journal+console
+ExecStart=/bin/bash -c /usr/local/bin/ourcompose_startup.sh

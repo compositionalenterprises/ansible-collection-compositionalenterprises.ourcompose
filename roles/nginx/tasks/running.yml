@@ -11,6 +11,7 @@
   template:
     src: nginx_default.conf.j2
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/default.conf"
+  when: ourcompose_nginx_rewrite_default | bool
 
 - name: (running) Nginx robots.txt is deployed
   template:

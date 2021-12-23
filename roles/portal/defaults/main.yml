@@ -10,6 +10,7 @@ ourcompose_portal_production_yml_enc: 'mMb7knWzem8t5jXbs66LiTh+MuR4VhwttCJcshES8
 ourcompose_portal_ourcomposebot_ro_key: ''
 ourcompose_portal_rundeck_apitoken: ''
 ourcompose_rundeck_apitoken: ''
+ourcompose_portal_allow_cr: no
 ourcompose_portal_admin_password: 'testpassword'
 ourcompose_portal_org_name: "{{ ourcompose_common_domain.split('.')[0].upper() }}"
 ourcompose_portal_admin_email: "{{ ourcompose_common_admin }}@{{ ourcompose_common_domain }}"
