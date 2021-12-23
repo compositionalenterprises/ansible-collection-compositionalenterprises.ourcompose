@@ -4,19 +4,5 @@
   - shell: bash ./get-docker.sh
   - shell: apt install python3-pip
   - shell: pip3 install docker docker-compose
-  - file:
-      path: "{{ ansible_env.HOME }}/ourcompose_ansible"
-      state: directory
-  - apt:
-      name: ansible
-      state: latest
-      update_cache: yes
-    become: True
-  - copy:
-      src: ./files/requirements.yml
-      dest: "{{ ansible_env.HOME }}/ourcompose_ansible/requirements.yml"
-  - shell:
-      cmd: ansible-galaxy install -fr requirements.yml
-      chdir: "{{ ansible_env.HOME }}/ourcompose_ansible"
 
 - import_playbook: "compositionalenterprises.ourcompose.install_skeleton"

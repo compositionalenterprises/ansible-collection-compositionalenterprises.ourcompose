@@ -2,24 +2,24 @@
 #
 # Set up the commands_receivable supervisor daemon
 #
-- name: (present) Set up SSH keys
+- name: (running) Set up SSH keys
   openssh_keypair:
     path: "~/.ssh/commands_receivable"
     type: ed25519
     state: present
 
-- name: (present) Slurp public key file contents
+- name: (running) Slurp public key file contents
   slurp:
     src: "~/.ssh/commands_receivable.pub"
   register: ourcompose_portal_crpubkey
 
-- name: (present) Add Commands Receivable public key to authorized key files
+- name: (running) Add Commands Receivable public key to authorized key files
   authorized_key:
     user: root
     state: present
     key: "{{ ourcompose_portal_crpubkey['content'] | b64decode }}"
 
-- name: (present) Ensure that commands_receivable isn't currently running
+- name: (running) Ensure that commands_receivable isn't currently running
   service_facts:
   register: ourcompose_portal_service_facts
   # Here we do the default, because if c_r hasn't been set up yet,
@@ -34,13 +34,13 @@
   # as that is what we have been having issues with.
   when: ourcompose_portal_restarted
 
-- name: (present) Commands receivable executable is deployed
+- name: (running) Commands receivable executable is deployed
   template:
     src: '../templates/portal_commands_receivable.py.j2'
     dest: '/usr/local/bin/commands_receivable.py'
     mode: '0744'
 
-- name: (present) Systemd service and socket file are deployed
+- name: (running) Systemd service and socket file are deployed
   copy:
     src: "portal_commands_receivable.{{ item }}"
     dest: "/etc/systemd/system/commands_receivable.{{ item }}"
@@ -48,7 +48,7 @@
     - 'service'
     - 'socket'
 
-- name: (present) systemd socket is started and enabled
+- name: (running) systemd socket is started and enabled
   systemd:
     name: commands_receivable.socket
     state: "{% if ourcompose_portal_restarted %}re{% endif %}started"
@@ -57,23 +57,23 @@
 #
 # Hop back into the regular nginx conf/DB setup and container deploy
 #
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_portal.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/portal.conf"
 
-- name: (present) Set up the MariaDB database
+- name: (running) Set up the MariaDB database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_portal_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Ensure portal_credentials directory exists
+- name: (running) Ensure portal_credentials directory exists
   file:
     path: "/srv/{{ ourcompose_portal_storage }}/portal_credentials"
     state: directory
 
-- name: (present) Create credentials files
+- name: (running) Create credentials files
   # So, let's review POSIX standards, shall we?
   #
   #     3.206 Line
@@ -95,7 +95,7 @@
     - 'production.key'
     - 'production.yml.enc'
 
-- name: (present) Determine whether the portal service is existing yet
+- name: (running) Determine whether the portal service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep portal
   failed_when: False
@@ -103,7 +103,7 @@
 
 - name: Deploy Container
   block:
-    - name: (present) The latest portal service is {% if not ourcompose_portal_existing['rc'] %}re{% endif %}started
+    - name: (running) The latest portal service is {% if not ourcompose_portal_existing['rc'] %}re{% endif %}started
       docker_compose:
         project_name: portal
         definition:
@@ -151,7 +151,7 @@
               backend:
                   external: true
         pull: yes
-        state: "{{ ourcompose_portal_state }}"
+        state: present
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.
         restarted: "{{ not ourcompose_portal_existing['rc'] and ourcompose_portal_restarted }}"
@@ -159,10 +159,10 @@
       register: ourcompose_portal_output
       no_log: "{{ ourcompose_common_no_log }}"
   rescue:
-    - name: (present) Forcibly clean the docker cache
+    - name: (running) Forcibly clean the docker cache
       command: docker system prune -a -f
 
-    - name: (present) The latest portal service is {% if not ourcompose_portal_existing['rc'] %}re{% endif %}started
+    - name: (running) The latest portal service is {% if not ourcompose_portal_existing['rc'] %}re{% endif %}started
       docker_compose:
         project_name: portal
         definition:
@@ -210,7 +210,7 @@
               backend:
                   external: true
         pull: yes
-        state: "{{ ourcompose_portal_state }}"
+        state: present
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.
         restarted: "{{ not ourcompose_portal_existing['rc'] and ourcompose_portal_restarted }}"
@@ -218,26 +218,28 @@
       timeout: 200
       no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) The portal cron job for health checks
+- name: (running) The portal cron job for health checks
   cron:
     name: "Portal Health Check"
     minute: "*/10"
     hour: "*"
     day: "*"
     job: "/usr/bin/docker exec portal /app/bin/seeds/health_check.sh"
+  when: ourcompose_portal_cron_healthcheck
 
-- name: (present) The portal cron job to update the database with daily data
+- name: (running) The portal cron job to update the database with daily data
   cron:
     name: "Portal Full Backup"
     minute: "{{ ourcompose_portal_cron_minute }}"
     hour: "{{ ourcompose_portal_cron_hour }}"
     day: "{{ ourcompose_portal_cron_day }}"
     job: "/usr/bin/docker exec portal /app/bin/backup.sh"
+  when: ourcompose_portal_cron_backup
 
 #
 # Admin Password
 #
-- name: (present) Portal has all of its database migrations ran
+- name: (running) Portal has all of its database migrations ran
   shell: "
     docker exec -i portal sh -c \"
       export RAILS_ENV=production;
@@ -253,7 +255,7 @@
   retries: 24
   delay: 5
 
-- name: (present) Create the admin account
+- name: (running) Create the admin account
   # Update or Add admin script example
   # See /app/bin/rake_admin.sh script on server for env vars
   shell: "
@@ -268,7 +270,7 @@
   failed_when: False
     #- ourcompose_portal_create_admin['rc'] not in [0, 127]
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:

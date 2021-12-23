@@ -1,10 +1,10 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_jekyll.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/jekyll.conf"
 
-- name: (present) The jekyll data dir is created
+- name: (running) The jekyll data dir is created
   file:
     path: "/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/"
     state: directory
@@ -12,19 +12,19 @@
     group: 1000
     recurse: True
 
-- name: (present) The entrypoint.sh script is deployed
+- name: (running) The entrypoint.sh script is deployed
   copy:
     src: '../files/jekyll_entrypoint.sh'
     dest: '/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/entrypoint.sh'
     mode: '0555'
 
-- name: (present) Determine whether the jekyll service is existing yet
+- name: (running) Determine whether the jekyll service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep jekyll
   failed_when: False
   register: ourcompose_jekyll_existing
 
-- name: (present) The latest jekyll service is {% if not ourcompose_jekyll_existing['rc'] %}re{% endif %}started
+- name: (running) The latest jekyll service is {% if not ourcompose_jekyll_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: jekyll
     definition:
@@ -60,21 +60,21 @@
           frontend:
               external: true
     pull: yes
-    state: "{{ ourcompose_jekyll_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_jekyll_existing['rc'] }}"
     timeout: 200
   register: ourcompose_jekyll_output
 
-- name: (present) Wait for jekyll to build the site and start up the server
+- name: (running) Wait for jekyll to build the site and start up the server
   shell: docker logs --since 6m jekyll | grep 'Server running...'
   register: ourcompose_jekyll_server_running
   until: ourcompose_jekyll_server_running['rc'] == 0
   retries: 72
   delay: 5
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:

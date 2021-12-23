@@ -1,5 +1,5 @@
 ---
-ourcompose_portal_state: present
+ourcompose_portal_state: 'running'
 ourcompose_portal_version: '1.12.1'
 ourcompose_portal_storage: 'local'
 ourcompose_portal_restarted: 'yes'
@@ -20,6 +20,8 @@ ourcompose_portal_initial_install: "0"
 ourcompose_portal_cron_minute: "{{ range(0, 60) | random }}"
 ourcompose_portal_cron_hour: "{{ range(3, 5) | random }}"
 ourcompose_portal_cron_day: "*/2"
+ourcompose_portal_cron_healthcheck: true
+ourcompose_portal_cron_backup: false
 ourcompose_portal_bind_mountpoints:
   - {location: '/portal/packs/', directory: '/app/public/packs'}
 ourcompose_portal_mariadb_present: |

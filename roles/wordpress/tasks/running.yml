@@ -1,22 +1,22 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_wordpress.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/wordpress.conf"
 
-- name: (present) Set up the mariadb database
+- name: (running) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_wordpress_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the wordpress service is existing yet
+- name: (running) Determine whether the wordpress service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep wordpress
   failed_when: False
   register: ourcompose_wordpress_existing
 
-- name: (present) The latest wordpress service is {% if not ourcompose_wordpress_existing['rc'] %}re{% endif %}started
+- name: (running) The latest wordpress service is {% if not ourcompose_wordpress_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: wordpress
     definition:
@@ -54,7 +54,7 @@
           backend:
               external: true
     pull: yes
-    state: "{{ ourcompose_wordpress_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_wordpress_existing['rc'] }}"
@@ -65,10 +65,10 @@
 #
 # Setup Configuration
 #
-- name: (present) Symlink wordpress directory as a sub-directory
+- name: (running) Symlink wordpress directory as a sub-directory
   shell: docker exec -i wordpress bash -c "ln -snfT /var/www/html/ /var/www/html/wordpress"
 
-- name: (present) Ensure large file uploads are permitted in htaccess
+- name: (running) Ensure large file uploads are permitted in htaccess
   shell: docker exec -i wordpress bash -c "grep -qxF '{{ item }}' /var/www/html/.htaccess || echo '{{ item }}' >> /var/www/html/.htaccess"
   when: ourcompose_wordpress_output.changed
   with_items:
@@ -77,14 +77,14 @@
     - 'php_value max_execution_time 300'
     - 'php_value max_input_time 300'
 
-- name: (present) Ensure uploads have a location to upload to
+- name: (running) Ensure uploads have a location to upload to
   shell: docker exec -i wordpress bash -c "mkdir -p /var/www/html/wp-content/uploads && chown -R 33:33 /var/www/html/wp-content/uploads"
   when: ourcompose_wordpress_output.changed
 
 #
 # Finish install if necessary
 #
-- name: (present) Automate Wordpress Initial Install
+- name: (running) Automate Wordpress Initial Install
   shell: "
     docker exec -u 33 -i wordpress bash -c \"
       curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar;
@@ -99,7 +99,7 @@
       \"
     "
 
-- name: (present) Make sure dataqbase is up-to-date
+- name: (running) Make sure dataqbase is up-to-date
   shell: "
     docker exec -u 33 -i wordpress bash -c \"
       php wp-cli.phar core update-db;

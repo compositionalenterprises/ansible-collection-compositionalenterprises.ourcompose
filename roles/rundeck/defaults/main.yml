@@ -1,12 +1,12 @@
 ---
-ourcompose_rundeck_state: present
+ourcompose_rundeck_state: 'running'
 ourcompose_rundeck_version: '3.3.14'
 ourcompose_rundeck_storage: 'local'
 ourcompose_rundeck_admin_password: 'testpassword'
 ourcompose_rundeck_backend_password: 'testpassword'
 ourcompose_rundeck_api_tokens_duration_max: '0'
 ourcompose_rundeck_bind_mountpoints:
-  - {location: '/rundeck/assets/', directory: '/home/rundeck/assets'}
+  - {location: '/rundeck/assets/', directory: '/srv/{{ ourcompose_rundeck_storage }}/rundeck_etc/assets'}
 ourcompose_rundeck_mariadb_present: |
   CREATE USER IF NOT EXISTS 'rundeck'@'%' IDENTIFIED BY '{{ ourcompose_rundeck_backend_password }}';
   CREATE DATABASE IF NOT EXISTS rundeck;

@@ -1,5 +1,5 @@
 ---
-ourcompose_kanboard_state: present
+ourcompose_kanboard_state: 'running'
 ourcompose_kanboard_version: 'v1.2.19'
 ourcompose_kanboard_storage: 'local'
 ourcompose_kanboard_admin_password: 'testpassword'

@@ -1,5 +1,5 @@
 ---
-- name: (present) Migrate any legacy directories
+- name: (running) Migrate any legacy directories
   shell:
     cmd: "mv /srv/{{ ourcompose_mariadb_storage }}/database_{{ item }} /srv/{{ ourcompose_mariadb_storage }}/mariadb_{{ item }}"
   loop:
@@ -8,13 +8,13 @@
   # We're just brute-forcing the move here. stable-5.X this entire task can be removed
   failed_when: False
 
-- name: (present) Determine whether the mariadb service is existing yet
+- name: (running) Determine whether the mariadb service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep mariadb
   failed_when: False
   register: ourcompose_mariadb_existing
 
-- name: (present) The latest mariadb service is {% if not ourcompose_mariadb_existing['rc'] %}re{% endif %}started
+- name: (running) The latest mariadb service is {% if not ourcompose_mariadb_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: mariadb
     definition:
@@ -40,7 +40,7 @@
           backend:
               name: backend
     pull: yes
-    state: "{{ ourcompose_mariadb_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_mariadb_existing['rc'] and ourcompose_mariadb_restarted }}"
@@ -53,7 +53,7 @@
     ourcompose_mariadb_root_password: "{{ ourcompose_mariadb_root_password }}"
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) The mariadb database service is up and initialized
+- name: (running) The mariadb database service is up and initialized
   # We're running a while loop to check to ensure that the mariadb database has
   # initialized:
   #   https://stackoverflow.com/questions/25503412/how-do-i-know-when-my-docker-mysql-container-is-up-and-mysql-is-ready-for-taking

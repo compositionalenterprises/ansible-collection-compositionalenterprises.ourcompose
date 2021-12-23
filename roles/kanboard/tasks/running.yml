@@ -1,22 +1,22 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_kanboard.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/kanboard.conf"
 
-- name: (present) Set up the MySQL database
+- name: (running) Set up the MySQL database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_kanboard_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the kanboard service is existing yet
+- name: (running) Determine whether the kanboard service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep kanboard
   failed_when: False
   register: ourcompose_kanboard_existing
 
-- name: (present) The latest kanboard service is {% if not ourcompose_kanboard_existing['rc'] %}re{% endif %}started
+- name: (running) The latest kanboard service is {% if not ourcompose_kanboard_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: kanboard
     definition:
@@ -66,7 +66,7 @@
       volumes:
         nginx:
     pull: yes
-    state: "{{ ourcompose_kanboard_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_kanboard_existing['rc'] }}"
@@ -82,19 +82,19 @@
 #
 # But there is a workaround: https://github.com/kanboard/kanboard/issues/2561#issuecomment-238739921
 #
-- name: (present) Symlink kanboard directory
+- name: (running) Symlink kanboard directory
   shell: docker exec -i kanboard bash -c "ln -snfT /var/www/app/ /var/www/app/kanboard"
 
-- name: (present) nginx.conf is deployed
+- name: (running) nginx.conf is deployed
   copy:
     src: 'kanboard_nginx.conf'
     dest: '/var/lib/docker/volumes/kanboard_nginx/_data/nginx.conf'
   notify: restart_kanboard
 
-- name: (present) Flush handlers to restart kanboard before setting up the bind mountpoints
+- name: (running) Flush handlers to restart kanboard before setting up the bind mountpoints
   meta: flush_handlers
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -104,7 +104,7 @@
 #
 # Admin Password
 #
-- name: (present) Kanboard is healthy
+- name: (running) Kanboard is healthy
   shell: docker exec -i kanboard bash -c "curl -sSL --fail localhost/kanboard"
   register: ourcompose_kanboard_health
   until: ourcompose_kanboard_health['rc'] == 0
@@ -112,7 +112,7 @@
   delay: 5
 
 # See https://github.com/kanboard/kanboard/issues/853 for explanation
-- name: (present) Generate the password hash
+- name: (running) Generate the password hash
   shell: "
     docker exec -i kanboard bash -c \"
       echo '
@@ -120,11 +120,13 @@
       | php -a\"
     "
   register: ourcompose_kanboard_admin_password_hash
+  no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) The existing password is replaced in the database
+- name: (running) The existing password is replaced in the database
   shell: "
     docker exec -i mariadb bash -c \"
       mysql -uroot -p{{ ourcompose_mariadb_root_password }} -e
         \\\"use kanboard; UPDATE users SET password='{{ ourcompose_kanboard_admin_password_hash['stdout_lines'][-1] | replace ('$', '\\\\\\$')}}' WHERE username='admin';\\\"
       \"
     "
+  no_log: "{{ ourcompose_common_no_log }}"

@@ -1,5 +1,5 @@
 ---
-ourcompose_commandcenter_state: present
+ourcompose_commandcenter_state: 'running'
 ourcompose_commandcenter_version: '1.15.0'
 ourcompose_commandcenter_storage: 'local'
 ourcompose_commandcenter_production_key: '5c9aceffa60041f9bd646287bce1cc72'

@@ -1,22 +1,22 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_firefly.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/firefly.conf"
 
-- name: (present) Set up the mariadb database
+- name: (running) Set up the mariadb database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_firefly_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Determine whether the firefly service is existing yet
+- name: (running) Determine whether the firefly service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep firefly
   failed_when: False
   register: ourcompose_firefly_existing
 
-- name: (present) The latest firefly service is {% if not ourcompose_firefly_existing['rc'] %}re{% endif %}started
+- name: (running) The latest firefly service is {% if not ourcompose_firefly_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: firefly
     definition:
@@ -54,7 +54,7 @@
         backend:
           external: true
     pull: yes
-    state: "{{ ourcompose_firefly_state }}"
+    state: present
     # If the container is not already present, we don't want to pass
     # the 'restarted' parameter, we just want it restarted regularly.
     restarted: "{{ not ourcompose_firefly_existing['rc'] }}"
@@ -62,10 +62,10 @@
   register: ourcompose_firefly_output
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Symlink firefly directory as a subdirectory
+- name: (running) Symlink firefly directory as a subdirectory
   shell: docker exec -i firefly bash -c "ln -snfT /var/www/html/public/ /var/www/html/public/firefly"
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -75,7 +75,7 @@
 #
 # Create user admin
 #
-- name: (present) Firefly-III is healthy
+- name: (running) Firefly-III is healthy
   shell: "
     docker exec -i firefly bash -c \"
       curl -sSL --fail http://localhost:8080/firefly
@@ -86,7 +86,7 @@
   retries: 24
   delay: 5
 
-- name: (present) Get the url
+- name: (running) Get the url
   uri:
     url: https://{{ ourcompose_common_domain }}/firefly/register
     method: GET
@@ -94,7 +94,7 @@
     validate_certs: "{{ ourcompose_common_validate_certs }}"
   register: ourcompose_firefly_login
 
-- name: (present) Post to the URL
+- name: (running) Post to the URL
   uri:
     url: https://{{ ourcompose_common_domain }}/firefly/register
     method: POST

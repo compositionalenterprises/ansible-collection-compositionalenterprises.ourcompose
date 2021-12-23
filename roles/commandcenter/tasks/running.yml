@@ -1,16 +1,16 @@
 ---
-- name: (present) Nginx conf is deployed
+- name: (running) Nginx conf is deployed
   template:
     src: "nginx_commandcenter.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/commandcenter.conf"
 
-- name: (present) Set up the MariaDB database
+- name: (running) Set up the MariaDB database
   shell: docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "{{ ourcompose_commandcenter_mariadb_present }}"
   args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) Ensure commandcenter_credentials directory exists
+- name: (running) Ensure commandcenter_credentials directory exists
   file:
     path: "/srv/{{ ourcompose_commandcenter_storage }}/commandcenter_credentials"
     state: directory
@@ -37,7 +37,7 @@
     - 'production.key'
     - 'production.yml.enc'
 
-- name: (present) Determine whether the commandcenter service is existing yet
+- name: (running) Determine whether the commandcenter service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep commandcenter
   failed_when: False
@@ -45,8 +45,8 @@
 
 - name: Deploy Container
   block:
-    - name: (present) The commandcenter service is {% if not ourcompose_commandcenter_existing['rc'] %}re{% endif %}started
-      docker_service:
+    - name: (running) The commandcenter service is {% if not ourcompose_commandcenter_existing['rc'] %}re{% endif %}started
+      docker_compose:
         project_name: commandcenter
         definition:
           version: '3.6'
@@ -82,7 +82,7 @@
                   external: true
 
         pull: yes
-        state: "{{ ourcompose_commandcenter_state }}"
+        state: present
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.
         restarted: "{{ not ourcompose_commandcenter_existing['rc'] }}"
@@ -91,11 +91,11 @@
       no_log: "{{ ourcompose_common_no_log }}"
 
   rescue:
-    - name: (present) Forcibly clean the docker cache
+    - name: (running) Forcibly clean the docker cache
       command: docker system prune -a -f
 
-    - name: (present) The commandcenter service version {% if not ourcompose_commandcenter_existing['rc'] %}re{% endif %}started
-      docker_service:
+    - name: (running) The commandcenter service version {% if not ourcompose_commandcenter_existing['rc'] %}re{% endif %}started
+      docker_compose:
         project_name: commandcenter
         definition:
           version: '3.6'
@@ -131,7 +131,7 @@
                   external: true
 
         pull: yes
-        state: "{{ ourcompose_commandcenter_state }}"
+        state: present
         # If the container is not already present, we don't want to pass
         # the 'restarted' parameter, we just want it restarted regularly.
         restarted: "{{ not ourcompose_commandcenter_existing['rc'] }}"
@@ -139,14 +139,14 @@
       register: ourcompose_commandcenter_output
       no_log: "{{ ourcompose_common_no_log }}"
 
-- name: (present) The commandcenter cron job to update the database with daily data
+- name: (running) The commandcenter cron job to update the database with daily data
   cron:
     name: "CC Update Data"
     hour: "4"
     day: "*"
     job: "/usr/bin/docker exec commandcenter /app/bin/seeds/daily.sh"
 
-- name: (present) Set up the bind mountpoints
+- name: (running) Set up the bind mountpoints
   ansible.builtin.import_role:
     name: compositionalenterprises.ourcompose.bind_mountpoints
   vars:
@@ -156,7 +156,7 @@
 #
 # Admin Password
 #
-- name: (present) CommandCenter has all of its database migrations ran
+- name: (running) CommandCenter has all of its database migrations ran
   shell: "
     docker exec -i commandcenter sh -c \"
       export RAILS_ENV=production;
@@ -172,7 +172,7 @@
   retries: 24
   delay: 5
 
-- name: (present) Create the admin account
+- name: (running) Create the admin account
   # Update or Add admin script example
   # See /app/bin/rake_admin.sh script on server for env vars
   shell: "

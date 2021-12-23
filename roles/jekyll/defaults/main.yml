@@ -1,14 +1,12 @@
 ---
-ourcompose_jekyll_state: present
+ourcompose_jekyll_state: 'running'
 ourcompose_jekyll_version: '4.1.0'
 ourcompose_jekyll_storage: 'local'
 ourcompose_jekyll_port: '8080'
 ourcompose_jekyll_git_url: 'https://github.com/volny/creative-theme-jekyll.git'
 ourcompose_jekyll_git_branch: 'master'
 ourcompose_jekyll_bind_mountpoints:
-  - {location: '/jekyll/font-awesome/fonts/', directory: '/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/font-awesome/fonts'}
-  - {location: '/jekyll/img/', directory: '/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/img'}
-  - {location: '/jekyll/js/', directory: '/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/js'}
+  - {location: '/jekyll/', directory: '/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/_site'}
 ourcompose_jekyll_extra_commands: |
   echo "Hello, World!"
   echo "Command number 2"
@@ -40,7 +38,7 @@ ourcompose_jekyll_healthcheck: |
     && wget --quiet --no-verbose --tries=1 --spider --no-check-certificate nginx/$${path} \
   {% endif %} \
   || exit 1
-compositional_jekyll_csp:
+ourcompose_jekyll_csp:
   default-src:
   - 'none'
   script-src:

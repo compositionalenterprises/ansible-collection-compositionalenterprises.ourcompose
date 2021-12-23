@@ -1,6 +1,6 @@
 ---
-ourcompose_nextcloud_state: present
-ourcompose_nextcloud_version: '21'
+ourcompose_nextcloud_state: 'running'
+ourcompose_nextcloud_version: '22'
 ourcompose_nextcloud_storage: 'local'
 ourcompose_nextcloud_backend_password: 'testpassword'
 ourcompose_nextcloud_admin_user: 'admin'

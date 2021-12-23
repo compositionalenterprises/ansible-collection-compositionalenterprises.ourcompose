@@ -1,5 +1,5 @@
 ---
-ourcompose_dolibarr_state: present
+ourcompose_dolibarr_state: 'running'
 ourcompose_dolibarr_version: '13.0'
 ourcompose_dolibarr_storage: 'local'
 ourcompose_dolibarr_backend_password: 'testpassword'

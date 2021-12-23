@@ -1,5 +1,5 @@
 ---
-ourcompose_mariadb_state: 'present'
+ourcompose_mariadb_state: 'running'
 ourcompose_mariadb_version: '10.5'
 ourcompose_mariadb_storage: 'local'
 ourcompose_mariadb_restarted: 'yes'

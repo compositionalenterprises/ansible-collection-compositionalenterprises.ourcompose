@@ -107,6 +107,13 @@ def build_command(spec):
 
 
 def set_entrypoint_path():
+    # Get the HOST variable that was passed to portal, so we can be passing
+    # the correct param to the rest of the services, based on what we passed
+    # during the initial setup phase.
+    cmd1 = "docker inspect portal --format '{% raw %}{{json .Config.Env}}{% endraw %}' | grep -oe "
+    cmd2 = "'\"HOST=[a-zA-Z0-9_.-]\+' | cut -d '=' -f 2"
+    portal_host = subprocess.check_output(cmd1 + cmd2, shell=True,
+        universal_newlines=True).strip()
     # Set the script dict for the options we have to choose amongst.
     # We're now echoing localhost into an inventory file. This allows us to
     # pick up the group_vars directory that is inside of the environment/ dir.
@@ -119,7 +126,7 @@ def set_entrypoint_path():
         "echo '  children:' >> environment/localhost.yml\n",
         "echo '    compositional:' >> environment/localhost.yml\n",
         "echo '      hosts:' >> environment/localhost.yml\n",
-        "echo '        localhost:' >> environment/localhost.yml\n",
+        f"echo '        {portal_host}:' >> environment/localhost.yml\n",
         "echo $VAULT_PASSWORD > environment/.vault_pass\n",
         'exec "$@"\n'
         ]
@@ -192,7 +199,7 @@ def build_container_image(collection_version, build_target):
         project_dir = '/tmp/ansible_project'
         subprocess.run(cmd1 + cmd2 + cmd3 + project_dir, shell=True)
         cmd1 = "git branch -a | "
-        cmd2 = f"grep 'remotes/origin/{collection_version}'"
+        cmd2 = f"grep 'remotes/origin/{collection_version} '"
         git_proj_matching_branch = subprocess.run(cmd1 + cmd2,
             shell=True, cwd=project_dir)
         # Cleanup git repo
