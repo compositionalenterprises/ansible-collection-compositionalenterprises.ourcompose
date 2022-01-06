@@ -59,7 +59,7 @@ def get_no_cache(build_target, collection_version, oc_mgmt_branch):
     # Greater than (`>`) when comparing datetime objects means "newer than".
     # So here we are testing if the git history has a commit that is newer
     # than the time that the docker image was built. This means that we want to
-    # build a completely new container, and 
+    # build a completely new container.
     if (git_proj_datetime > docker_datetime or
             git_coll_datetime > docker_datetime):
         print("Found git date that is later than our docker image build date.")
@@ -148,7 +148,7 @@ def set_entrypoint_path():
 def build_container_image(collection_version, build_target):
     os.makedirs('/tmp/docker_build', exist_ok=True)
     dockerfile_path = '/tmp/docker_build/Dockerfile'
-    
+
     #
     # Get the ourcompose_management project branch to use
     # We did this before, but only for determining whether to build the cache
@@ -160,12 +160,6 @@ def build_container_image(collection_version, build_target):
         # from the string like 'v3.2.1'
         oc_mgmt_branch = 'stable-' + collection_version[1]
         oc_mgmt_maj_ver = collection_version[1]
-    elif collection_version == 'master':
-        # This is special for master. And we can't test with the branch
-        # versioning like below, because in galaxy.yml, master is pegged
-        # at 0.0.0. So right now we just hardcode it.
-        oc_mgmt_branch = 'stable-3'
-        oc_mgmt_maj_ver = '3'
     elif collection_version.startswith('stable'):
         # This gets the stable major version from the tag that is
         # targeting the 'stable-3.2' type string
@@ -212,6 +206,11 @@ def build_container_image(collection_version, build_target):
             # This branch exists in the project, so let's set that one
             # specifically
             oc_mgmt_branch = collection_version
+        elif git_coll_maj_version == '0':
+            # We want to put master here, since there is no matching
+            # project branch, and this appears to have been forked from
+            # master.
+            oc_mgmt_branch = 'master'
         else:
             # This branch does NOT exists in the project, so let's just use the
             # matching major version stable instance
