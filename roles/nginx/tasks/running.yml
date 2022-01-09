@@ -1,4 +1,11 @@
 ---
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'nginx'
+  when: ourcompose_nginx_storage == 'remote'
+
 - name: Bind mounts directories are present
   file:
     path: "{{ item }}"

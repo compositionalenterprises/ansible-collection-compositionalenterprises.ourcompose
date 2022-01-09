@@ -4,6 +4,13 @@
     src: "nginx_jekyll.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/jekyll.conf"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'jekyll'
+  when: ourcompose_jekyll_storage == 'remote'
+
 - name: (running) The jekyll data dir is created
   file:
     path: "/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll/"
@@ -34,7 +41,6 @@
               image: "jekyll/jekyll:{{ ourcompose_jekyll_version }}"
               container_name: 'jekyll'
               command: "/srv/jekyll/entrypoint.sh"
-              restart: always
               volumes:
                 - "/srv/{{ ourcompose_jekyll_storage }}/jekyll_jekyll:/srv/jekyll"
 
@@ -50,12 +56,6 @@
                 JEKYLL_EXTRA_COMMANDS: "{{ ourcompose_jekyll_extra_commands }}"
                 JEKYLL_ENV: 'production'
 
-              healthcheck:
-                test: "{{ ourcompose_jekyll_healthcheck }}"
-                interval: 5s
-                timeout: 30s
-                retries: 3
-
       networks:
           frontend:
               external: true
@@ -67,8 +67,8 @@
     timeout: 200
   register: ourcompose_jekyll_output
 
-- name: (running) Wait for jekyll to build the site and start up the server
-  shell: docker logs --since 6m jekyll | grep 'Server running...'
+- name: (running) Wait for jekyll to build the site
+  shell: docker logs --since 6m jekyll | grep 'disabled. Use --watch to enable.'
   register: ourcompose_jekyll_server_running
   until: ourcompose_jekyll_server_running['rc'] == 0
   retries: 72

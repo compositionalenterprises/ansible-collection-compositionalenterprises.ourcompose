@@ -69,6 +69,13 @@
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'portal'
+  when: ourcompose_portal_storage == 'remote'
+
 - name: (running) Ensure portal_credentials directory exists
   file:
     path: "/srv/{{ ourcompose_portal_storage }}/portal_credentials"
@@ -278,7 +285,7 @@
     ourcompose_bind_mountpoints_container: 'portal'
     ourcompose_bind_mountpoints_mountpoints: "{{ ourcompose_portal_bind_mountpoints }}"
 
-- name: (present) ourcompose_startup systemd restart service and script is placed
+- name: (running) ourcompose_startup systemd restart service and script is placed
   copy:
     src: "../files/portal_ourcompose_startup.{{ item['src'] }}"
     dest: "{{ item['dest_dir'] }}ourcompose_startup.{{ item['src'] }}"
@@ -287,7 +294,7 @@
     - {src: 'sh', dest_dir: '/usr/local/bin/', mode: 'a+x'}
     - {src: 'service', dest_dir: '/etc/systemd/system/', mode: '0655'}
 
-- name: (present) ourcompose_startup systemd socket is started and enabled
+- name: (running) ourcompose_startup systemd socket is started and enabled
   systemd:
     name: ourcompose_startup.service
     enabled: yes

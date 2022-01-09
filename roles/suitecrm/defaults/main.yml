@@ -1,5 +1,6 @@
 ---
 ourcompose_suitecrm_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_suitecrm_state }}"
 ourcompose_suitecrm_version: '7-debian-10'
 ourcompose_suitecrm_storage: 'local'
 ourcompose_suitecrm_admin_password: 'testpassword'

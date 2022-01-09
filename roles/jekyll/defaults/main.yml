@@ -1,5 +1,6 @@
 ---
 ourcompose_jekyll_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_jekyll_state }}"
 ourcompose_jekyll_version: '4.1.0'
 ourcompose_jekyll_storage: 'local'
 ourcompose_jekyll_port: '8080'
