@@ -4,6 +4,13 @@
     src: "nginx_bitwarden.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/bitwarden.conf"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'bitwarden'
+  when: ourcompose_bitwarden_storage == 'remote'
+
 - name: (running) Determine whether the bitwarden service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep bitwarden

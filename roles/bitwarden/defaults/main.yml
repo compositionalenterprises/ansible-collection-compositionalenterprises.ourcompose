@@ -1,5 +1,6 @@
 ---
 ourcompose_bitwarden_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_bitwarden_state }}"
 ourcompose_bitwarden_version: '1.22.2'
 ourcompose_bitwarden_storage: 'local'
 ourcompose_bitwarden_admin_password: 'testpassword'

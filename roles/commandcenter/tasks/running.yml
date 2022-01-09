@@ -10,6 +10,13 @@
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'commandcenter'
+  when: ourcompose_commandcenter_storage == 'remote'
+
 - name: (running) Ensure commandcenter_credentials directory exists
   file:
     path: "/srv/{{ ourcompose_commandcenter_storage }}/commandcenter_credentials"

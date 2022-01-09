@@ -1,14 +1,21 @@
 ---
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'bitcoind'
+  when: ourcompose_bitcoind_storage == 'remote'
+
 - name: (running) The bitcoind data dir is created
   file:
-    path: "/srv/{{ ourcompose_jekyll_storage }}/bitcoind_data/"
+    path: "/srv/{{ ourcompose_bitcoind_storage }}/bitcoind_data/"
     state: directory
     recurse: True
 
 - name: (running) Bitcoin.conf is templated
   template:
     src: ../templates/bitcoind_bitcoin.conf.j2
-    dest: "/srv/{{ ourcompose_jekyll_storage }}/bitcoind_data/bitcoin.conf"
+    dest: "/srv/{{ ourcompose_bitcoind_storage }}/bitcoind_data/bitcoin.conf"
 
 - name: (running) Determine whether the bitcoind service is existing yet
   shell:

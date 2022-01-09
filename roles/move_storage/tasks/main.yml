@@ -1,0 +1,34 @@
+---
+# tasks file for move_storage
+- name: Get size of all files to be moved over
+  shell:
+    # This will not fail since we are not setting pipefail. Otherwise, we would have to except where
+    # there are none of the the specified directories present.
+    cmd: du -cs /srv/local/{{ ourcompose_move_storage_service }}_* | tail -n 1 | awk '{print $1}'
+  register: ourcompose_common_local_file_size
+
+- name: We have storage to move
+  when:
+    # This ensures that there are files there
+    - ourcompose_common_local_file_size['stdout'] | int > 0
+  block:
+    - name: Get the available size of the remote storage location
+      shell:
+        cmd: df /srv/remote | tail -n 1 | awk '{print $4}'
+      register: ourcompose_common_remote_filesystem_size
+
+    - name: Stop service and migrate
+      when:
+          # This ensures that we have space there
+        - ourcompose_common_local_file_size['stdout'] | int < ourcompose_common_remote_filesystem_size['stdout'] | int
+      block:
+        - name: Stop and remove the docker service
+          # This works as long as we have only single containers per service. Once we start having
+          # multiple, this will have to get reworked. But this is fine like this for now.
+          docker_container:
+            name: "{{ ourcompose_move_storage_service }}"
+            state: absent
+
+        - name: Migrate files
+          shell:
+            cmd: mv /srv/local/{{ ourcompose_move_storage_service }}_* /srv/remote

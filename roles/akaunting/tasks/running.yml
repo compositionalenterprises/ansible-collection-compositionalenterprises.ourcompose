@@ -10,6 +10,13 @@
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'akaunting'
+  when: ourcompose_akaunting_storage == 'remote'
+
 - name: (running) Determine whether the akaunting service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep akaunting
@@ -32,7 +39,7 @@
 
 - name: (running) Register the number of tables
   shell: if [ $(docker exec -i mariadb mysql -uroot -p{{ ourcompose_mariadb_root_password }} <<< "select count(*) as totaltables from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=\"akaunting\"" | tail -n 1) -gt 5 ]; then echo "HasTables"; else echo "MissingTables"; fi
-  args: 
+  args:
     executable: '/bin/bash'
   register: number_of_tables_status
   no_log: "{{ ourcompose_common_no_log }}"
@@ -40,7 +47,7 @@
 - name: (running) The akaunting project is {% if not ourcompose_akaunting_existing['rc'] %}re{% endif %}started
   docker_compose:
     project_name: akaunting
-    definition: 
+    definition:
       version: '3.6'
       services:
           akaunting:
@@ -91,7 +98,7 @@
 
 - name: (running) Change Storage Permissions
   shell: docker exec -it akaunting chmod -R 777 /var/www/html/storage/
-  args: 
+  args:
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 

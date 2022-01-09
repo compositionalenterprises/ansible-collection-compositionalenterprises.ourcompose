@@ -10,6 +10,13 @@
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'bookstack'
+  when: ourcompose_bookstack_storage == 'remote'
+
 - name: (running) Ensure bookstack volume directories exist and have correct ownership
   file:
     path: "/srv/{{ ourcompose_bookstack_storage }}/bookstack_{{ item }}"

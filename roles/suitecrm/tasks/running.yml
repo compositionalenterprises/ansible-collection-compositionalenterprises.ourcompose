@@ -9,6 +9,13 @@
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'suitecrm'
+  when: ourcompose_suitecrm_storage == 'remote'
+
 - name: (running) Determine whether the suitecrm service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep suitecrm
@@ -63,7 +70,7 @@
     cmd: docker logs --since 6m suitecrm 2>&1 | grep '** SuiteCRM setup finished! **'
   register: ourcompose_suitecrm_server_running
   until: ourcompose_suitecrm_server_running['rc'] == 0
-  retries: 12
+  retries: 24
   delay: 5
 
 - name: (running) Symlink suitecrm directory as a subdirectory

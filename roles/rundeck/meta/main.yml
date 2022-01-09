@@ -2,10 +2,10 @@
 dependencies:
   - compositionalenterprises.ourcompose.common
   - role: compositionalenterprises.ourcompose.nginx
-    when: ourcompose_rundeck_state == 'running'
+    when: ourcompose_dep_state == 'running'
   - role: compositionalenterprises.ourcompose.mariadb
     ourcompose_mariadb_restarted: false
-    when: ourcompose_rundeck_state != 'stopped'
+    when: ourcompose_dep_state != 'stopped'
   - role: compositionalenterprises.ourcompose.portal
     ourcompose_portal_restarted: false
-    when: ourcompose_rundeck_state == 'running'
+    when: ourcompose_dep_state == 'running'

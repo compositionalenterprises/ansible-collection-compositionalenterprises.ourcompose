@@ -43,4 +43,4 @@ fi
 /bin/bash -c "${JEKYLL_EXTRA_COMMANDS}"
 
 mkdir -p _site
-jekyll serve --verbose --no-watch -H 0.0.0.0 -P $jekyll_port
+bash -c "jekyll build --verbose"

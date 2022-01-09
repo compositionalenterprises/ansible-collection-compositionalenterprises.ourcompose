@@ -10,6 +10,13 @@
     executable: '/bin/bash'
   no_log: "{{ ourcompose_common_no_log }}"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'firefly'
+  when: ourcompose_firefly_storage == 'remote'
+
 - name: (running) Determine whether the firefly service is existing yet
   shell:
     cmd: docker ps -a | tr -s ' ' | rev | cut -d ' ' -f 1 | rev | grep firefly

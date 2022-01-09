@@ -1,5 +1,6 @@
 ---
 ourcompose_bitcoind_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_bitcoind_state }}"
 ourcompose_bitcoind_version: '1.9.1.1'
 ourcompose_bitcoind_storage: 'local'
 # change to 18333 if running testnet

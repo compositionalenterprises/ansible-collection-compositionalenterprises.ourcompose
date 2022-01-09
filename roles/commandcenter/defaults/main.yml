@@ -1,5 +1,6 @@
 ---
 ourcompose_commandcenter_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_commandcenter_state }}"
 ourcompose_commandcenter_version: '1.15.0'
 ourcompose_commandcenter_storage: 'local'
 ourcompose_commandcenter_production_key: '5c9aceffa60041f9bd646287bce1cc72'

@@ -7,6 +7,10 @@
   loop: "{{ ourcompose_bind_mountpoints_mountpoints }}"
   register: ourcompose_bind_mountpoints_src_dirs
 
+- name: (nginx) Reset ourcompose_bind_mountpoints_mounts to an empty list
+  set_fact:
+    ourcompose_bind_mountpoints_mounts: []
+
 - name: (nginx) Register non-volume bind mountpoints
   set_fact:
     ourcompose_bind_mountpoints_mounts: "{{ ourcompose_bind_mountpoints_mounts + [{'location': item['item']['location'], 'directory': item['stdout'] + item['item']['directory']}] }}"
@@ -55,6 +59,14 @@
   command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mkdir -p /tmp/{{ item['item'].split('/')[-1] }}
   loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
 
+- name: (nginx) Unmount the tmp dev mountpoints if they're there, so we don't get already mounted errors
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- umount /tmp/{{ item['item'].split('/')[-1] }}
+  loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
+  register: ourcompose_bind_mountpoints_umount_block_dev
+  failed_when:
+    - ourcompose_bind_mountpoints_umount_block_dev['rc'] != 0
+    - "'not mounted' not in ourcompose_bind_mountpoints_umount_block_dev['stderr']"
+
 - name: (nginx) Mount the host filesystems on the temporary mountpoints
   command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mount {{ item['item'] }} /tmp/{{ item['item'].split('/')[-1] }}
   loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
@@ -62,6 +74,14 @@
 - name: (nginx) Make mountpoints in local nginx html directory
   command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mkdir -p {{ ourcompose_nginx_html_dir }}{{ item['item']['location'] }}
   loop: "{{ host_filesystem_mountpoints['results'] }}"
+
+- name: (nginx) Unmount the location mountpoint if it's there, so we don't get mount(2) system call failed No such file or directory
+  command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- umount {{ ourcompose_nginx_html_dir }}{{ item['item']['location'] }}
+  loop: "{{ host_filesystem_mountpoints['results'] }}"
+  register: ourcompose_bind_mountpoints_umount_location
+  failed_when:
+    - ourcompose_bind_mountpoints_umount_location['rc'] != 0
+    - "'not mounted' not in ourcompose_bind_mountpoints_umount_location['stderr']"
 
 - name: (nginx) Bind-mount the subdirectories onto the mountpoints in the local nginx html directory
   command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- mount --bind /tmp/{{ item['stdout'].split('/')[-1] }}{{ item['item']['directory'] }} {{ ourcompose_nginx_html_dir }}{{ item['item']['location'] }}
@@ -71,6 +91,21 @@
   command: nsenter --target {{ ourcompose_bind_mountpoints_nginx_container_pid['stdout'] }} --mount --uts --ipc --net --pid -- umount /tmp/{{ item['item'].split('/')[-1] }}
   loop: "{{ host_filesystem_mountpoints_numbers['results'] }}"
 
-- name: (nginx) Reload nginx container
-  shell:
-    cmd: docker exec -i nginx nginx -s reload
+- name: (nginx) Catch errors when restarting nginx
+  block:
+    - name: (nginx) Reload nginx container
+      shell:
+        cmd: docker exec -i nginx nginx -s reload
+      register: ourcompose_bind_mountpoints_reload
+
+  rescue:
+    # TODO: Make this loop through all errors
+    - name: (running) Remove the failed upstream conf file
+      file:
+        path: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/{{ ourcompose_bind_mountpoints_reload['stderr'].split('host not found in upstream \"')[1].split('\"')[0] }}.conf"
+        state: absent
+      when: "'host not found in upstream' in ourcompose_bind_mountpoints_reload['stderr']"
+
+    - name: (nginx) Try the reload again
+      shell:
+        cmd: docker exec -i nginx nginx -s reload

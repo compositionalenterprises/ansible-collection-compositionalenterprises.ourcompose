@@ -75,6 +75,7 @@ ourcompose_common_services:
   - 'commandcenter'
   - 'dolibarr'
   - 'firefly'
+  - 'jekyll'
   - 'kanboard'
   - 'nextcloud'
   - 'rundeck'
@@ -102,7 +103,7 @@ There are several variables that are typical of all of the services using that p
 - [pull](https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html#parameter-pull)
 - [state](https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html#parameter-state)
 
-There are two others that are specific to this role:
+There are two others that are specific to this collection:
 
 - `version`: The container image tag version to pull
 - `storage`: Whether this should go under `local` or `remote` storage. Note that `remote` storage is simply a directly under `/srv` that is meant to be mounted to an external volume of some kind, but is otherwise functionally the same as `local`.
@@ -200,6 +201,8 @@ New services should include the following setup steps:
 - NGINX Configuration Template
 - Database initialization check
 - Database setup script
+- Volume Mountpoint creation (optional, if you need to preseed these directories with files) (must be before move storage role)
+- Move Storage role (must be before existing container check)
 - Existing containter check
 - `docker_compose` setup
 - Bind Mountpoints

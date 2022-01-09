@@ -1,5 +1,6 @@
 ---
 ourcompose_rundeck_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_rundeck_state }}"
 ourcompose_rundeck_version: '3.3.17'
 ourcompose_rundeck_storage: 'local'
 ourcompose_rundeck_admin_password: 'testpassword'

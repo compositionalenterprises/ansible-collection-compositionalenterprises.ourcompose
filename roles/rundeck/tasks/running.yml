@@ -4,6 +4,13 @@
     src: "nginx_rundeck.conf.j2"
     dest: "/srv/{{ ourcompose_nginx_storage }}/nginx_conf.d/{{ ourcompose_common_domain }}/rundeck.conf"
 
+- name: (running) Move the storage to the appropriate location
+  ansible.builtin.import_role:
+    name: compositionalenterprises.ourcompose.move_storage
+  vars:
+    ourcompose_move_storage_service: 'rundeck'
+  when: ourcompose_rundeck_storage == 'remote'
+
 - name: (running) Persistant storage directories are provisioned
   file:
     path: "{{ item }}"
@@ -81,7 +88,7 @@
   shell: docker logs --since 6m rundeck | grep 'Grails application running'
   register: ourcompose_rundeck_server_running
   until: ourcompose_rundeck_server_running['rc'] == 0
-  retries: 72
+  retries: 120
   delay: 5
 
 - name: (running) Run additional setup commands in rundeck container

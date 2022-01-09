@@ -2,4 +2,4 @@
 dependencies:
   - compositionalenterprises.ourcompose.common
   - role: compositionalenterprises.ourcompose.portal
-    when: ourcompose_bitcoind_state == 'running'
+    when: ourcompose_dep_state == 'running'

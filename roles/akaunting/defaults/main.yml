@@ -1,5 +1,6 @@
 ---
 ourcompose_akaunting_state: 'running'
+ourcompose_dep_state: "{{ ourcompose_akaunting_state }}"
 ourcompose_akaunting_version: '2.1'
 ourcompose_akaunting_storage: 'local'
 ourcompose_akaunting_backend_password: 'testpassword'
