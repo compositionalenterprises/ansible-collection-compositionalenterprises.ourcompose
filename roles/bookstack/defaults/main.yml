@@ -1,7 +1,7 @@
 ---
 ourcompose_bookstack_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_bookstack_state }}"
-ourcompose_bookstack_version: '0.30'
+ourcompose_bookstack_version: '12.11'
 ourcompose_bookstack_storage: 'local'
 ourcompose_bookstack_backend_password: 'testpassword'
 ourcompose_bookstack_admin_password: 'testpassword'
