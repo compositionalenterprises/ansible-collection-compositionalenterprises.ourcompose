@@ -98,6 +98,13 @@
     dest: '/var/lib/docker/volumes/kanboard_nginx/_data/nginx.conf'
   notify: restart_kanboard
 
+- name: (running) Ensure db migrations complete before restarting the container
+  shell: docker exec -i kanboard bash -c "/var/www/app/cli db:version"
+  register: ourcompose_kanboard_migrations
+  until: ourcompose_kanboard_migrations['rc'] == 0
+  retries: 24
+  delay: 5
+
 - name: (running) Flush handlers to restart kanboard before setting up the bind mountpoints
   meta: flush_handlers
 
