@@ -1,7 +1,7 @@
 ---
 ourcompose_wordpress_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_wordpress_state }}"
-ourcompose_wordpress_version: '5.7'
+ourcompose_wordpress_version: '5.8'
 ourcompose_wordpress_storage: 'local'
 ourcompose_wordpress_title: 'Wordpress Blog'
 ourcompose_wordpress_admin_password: 'testpassword'
