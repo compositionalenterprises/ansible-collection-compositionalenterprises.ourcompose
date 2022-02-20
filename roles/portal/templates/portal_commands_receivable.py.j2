@@ -114,8 +114,6 @@ def set_entrypoint_path():
     cmd2 = "'\"HOST=[a-zA-Z0-9_.-]\+' | cut -d '=' -f 2"
     portal_host = subprocess.check_output(cmd1 + cmd2, shell=True,
         universal_newlines=True).strip()
-    portal_host = subprocess.check_output(cmd1 + cmd2, shell=True,
-        universal_newlines=True).strip()
     # Set the script dict for the options we have to choose amongst.
     # We're now echoing localhost into an inventory file. This allows us to
     # pick up the group_vars directory that is inside of the environment/ dir.
