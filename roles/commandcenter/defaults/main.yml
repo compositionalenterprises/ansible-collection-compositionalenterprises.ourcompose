@@ -10,8 +10,11 @@ ourcompose_commandcenter_backend_password: 'testpassword'
 ourcompose_commandcenter_bind_mountpoints:
   - {location: '/commandcenter/packs/', directory: '/app/public/packs'}
 ourcompose_commandcenter_mariadb_present: |
+  CREATE USER IF NOT EXISTS 'commandcenter'@'%' IDENTIFIED BY '{{ ourcompose_commandcenter_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS commandcenter;
-  GRANT ALL PRIVILEGES ON commandcenter.* TO 'commandcenter'@'%' IDENTIFIED BY '{{ ourcompose_commandcenter_backend_password }}';
+  GRANT ALL PRIVILEGES ON commandcenter.* TO 'commandcenter'@'%';
+  FLUSH privileges;
 ourcompose_commandcenter_mariadb_absent: |
   DROP USER IF EXISTS 'commandcenter'@'%';
   DROP DATABASE IF EXISTS commandcenter;

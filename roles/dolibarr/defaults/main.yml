@@ -13,8 +13,10 @@ ourcompose_dolibarr_bind_mountpoints:
   - {location: '/dolibarr/public/theme/', directory: '/usr/src/dolibarr/htdocs/public/theme'}
 ourcompose_dolibarr_mariadb_present: |
   CREATE USER IF NOT EXISTS 'dolibarr'@'%' IDENTIFIED BY '{{ ourcompose_dolibarr_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS dolibarr;
   GRANT ALL PRIVILEGES ON dolibarr.* TO 'dolibarr'@'%' IDENTIFIED BY '{{ ourcompose_dolibarr_backend_password }}';
+  FLUSH privileges;
 ourcompose_dolibarr_mariadb_absent: |
   DROP USER IF EXISTS 'dolibarr'@'%';
   DROP DATABASE IF EXISTS dolibarr;

@@ -9,8 +9,10 @@ ourcompose_kanboard_bind_mountpoints:
   - {location: '/kanboard/assets/', directory: '/var/www/app/assets'}
 ourcompose_kanboard_mariadb_present: |
   CREATE USER IF NOT EXISTS 'kanboard'@'%' IDENTIFIED BY '{{ ourcompose_kanboard_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS kanboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   GRANT ALTER, CREATE, DELETE, DROP, INDEX, INSERT, REFERENCES, SELECT, UPDATE ON kanboard.* TO 'kanboard'@'%';
+  FLUSH privileges;
 ourcompose_kanboard_mariadb_absent: |
   DROP USER IF EXISTS 'kanboard'@'%';
   DROP DATABASE IF EXISTS kanboard;

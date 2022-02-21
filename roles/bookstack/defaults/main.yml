@@ -10,8 +10,10 @@ ourcompose_bookstack_bind_mountpoints:
   - {location: '/bookstack/uploads/', directory: '/srv/{{ ourcompose_bookstack_storage }}/bookstack_uploads'}
 ourcompose_bookstack_mariadb_present: |
   CREATE USER IF NOT EXISTS 'bookstack'@'%' IDENTIFIED BY '{{ ourcompose_bookstack_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS bookstack;
   GRANT ALL PRIVILEGES ON bookstack.* TO 'bookstack'@'%';
+  FLUSH privileges;
 ourcompose_bookstack_mariadb_absent: |
   DROP USER IF EXISTS 'bookstack'@'%';
   DROP DATABASE IF EXISTS bookstack;

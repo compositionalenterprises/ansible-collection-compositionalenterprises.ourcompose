@@ -28,8 +28,10 @@ ourcompose_portal_bind_mountpoints:
   - {location: '/portal/packs/', directory: '/app/public/packs'}
 ourcompose_portal_mariadb_present: |
   CREATE USER IF NOT EXISTS 'portal'@'%' IDENTIFIED BY '{{ ourcompose_portal_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS portal;
   GRANT ALL PRIVILEGES ON portal.* TO 'portal'@'%';
+  FLUSH privileges;
 ourcompose_portal_mariadb_absent: |
   DROP USER IF EXISTS 'portal'@'%';
   DROP DATABASE IF EXISTS portal;

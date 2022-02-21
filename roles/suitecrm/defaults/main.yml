@@ -11,8 +11,10 @@ ourcompose_suitecrm_bind_mountpoints:
   - {location: '/suitecrm/vendor/', directory: '/opt/bitnami/suitecrm/vendor'}
 ourcompose_suitecrm_mariadb_present: |
   CREATE USER IF NOT EXISTS 'suitecrm'@'%' IDENTIFIED BY '{{ ourcompose_suitecrm_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS suitecrm;
   GRANT ALL PRIVILEGES ON suitecrm.* TO 'suitecrm'@'%';
+  FLUSH privileges;
 ourcompose_suitecrm_mariadb_absent: |
   DROP USER IF EXISTS 'suitecrm'@'%';
   DROP DATABASE IF EXISTS suitecrm;

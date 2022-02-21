@@ -12,6 +12,7 @@ ourcompose_nextcloud_bind_mountpoints:
   - {location: '/nextcloud/apps/', directory: '/usr/src/nextcloud/apps'}
 ourcompose_nextcloud_mariadb_present: |
   CREATE USER IF NOT EXISTS 'nextcloud'@'%' IDENTIFIED BY '{{ ourcompose_nextcloud_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS nextcloud;
   GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'%' IDENTIFIED BY '{{ ourcompose_nextcloud_backend_password }}';
   FLUSH privileges;

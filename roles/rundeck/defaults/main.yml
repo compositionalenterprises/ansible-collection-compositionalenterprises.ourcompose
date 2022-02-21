@@ -10,8 +10,10 @@ ourcompose_rundeck_bind_mountpoints:
   - {location: '/rundeck/assets/', directory: '/srv/{{ ourcompose_rundeck_storage }}/rundeck_etc/assets'}
 ourcompose_rundeck_mariadb_present: |
   CREATE USER IF NOT EXISTS 'rundeck'@'%' IDENTIFIED BY '{{ ourcompose_rundeck_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS rundeck;
   GRANT ALL PRIVILEGES ON rundeck.* TO 'rundeck'@'%';
+  FLUSH privileges;
 ourcompose_rundeck_mariadb_absent: |
   DROP USER IF EXISTS 'rundeck'@'%';
   DROP DATABASE IF EXISTS rundeck;

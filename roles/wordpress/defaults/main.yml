@@ -8,8 +8,10 @@ ourcompose_wordpress_admin_password: 'testpassword'
 ourcompose_wordpress_backend_password: 'testpassword'
 ourcompose_wordpress_mariadb_present: |
   CREATE USER IF NOT EXISTS 'wordpress'@'%' IDENTIFIED BY '{{ ourcompose_wordpress_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS wordpress;
   GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'%';
+  FLUSH privileges;
 ourcompose_wordpress_mariadb_absent: |
   DROP USER IF EXISTS 'wordpress'@'%';
   DROP DATABASE IF EXISTS wordpress;

@@ -15,8 +15,10 @@ ourcompose_firefly_bind_mountpoints:
   - {location: '/firefly/v1/lib/', directory: '/var/www/html/public/v1/lib'}
 ourcompose_firefly_mariadb_present: |
   CREATE USER IF NOT EXISTS 'firefly'@'%' IDENTIFIED BY '{{ ourcompose_firefly_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS firefly;
   GRANT ALL PRIVILEGES ON firefly.* TO 'firefly'@'%';
+  FLUSH privileges;
 ourcompose_firefly_mariadb_absent: |
   DROP USER IF EXISTS 'firefly'@'%';
   DROP DATABASE IF EXISTS firefly;

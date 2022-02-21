@@ -13,8 +13,10 @@ ourcompose_akaunting_bind_mountpoints:
   - {location: '/akaunting/public/js/', directory: '/var/www/html/public/js'}
 ourcompose_akaunting_mariadb_present: |
   CREATE USER IF NOT EXISTS 'akaunting'@'%' IDENTIFIED BY '{{ ourcompose_akaunting_backend_password }}';
+  FLUSH privileges;
   CREATE DATABASE IF NOT EXISTS akaunting;
   GRANT ALL PRIVILEGES ON akaunting.* TO 'akaunting'@'%' IDENTIFIED BY '{{ ourcompose_akaunting_backend_password }}';
+  FLUSH privileges;
 ourcompose_akaunting_mariadb_absent: |
   DROP USER IF EXISTS 'akaunting'@'%';
   DROP DATABASE IF EXISTS akaunting;
