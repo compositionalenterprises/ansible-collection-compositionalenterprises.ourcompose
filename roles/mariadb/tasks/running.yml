@@ -1,7 +1,10 @@
 ---
 - name: (running) Migrate any legacy directories
   shell:
-    cmd: "mv /srv/{{ ourcompose_mariadb_storage }}/database_{{ item }} /srv/{{ ourcompose_mariadb_storage }}/mariadb_{{ item }}"
+    cmd: |
+      mkdir -p /srv/{{ ourcompose_mariadb_storage }}/mariadb_{{ item }} && \
+      mv /srv/{{ ourcompose_mariadb_storage }}/database_{{ item }}/* /srv/{{ ourcompose_mariadb_storage }}/mariadb_{{ item }} && \
+      rm -rf /srv/{{ ourcompose_mariadb_storage }}/database_{{ item }}/
   loop:
     - 'mysql'
     - 'conf.d'
