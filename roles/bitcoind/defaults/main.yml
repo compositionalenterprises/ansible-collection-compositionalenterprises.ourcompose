@@ -1,7 +1,8 @@
 ---
 ourcompose_bitcoind_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_bitcoind_state }}"
-ourcompose_bitcoind_version: '1.9.1.1'
+# https://gitlab.com/bitcoinunlimited/BCHUnlimited/-/tree/dev/doc/release-notes
+ourcompose_bitcoind_version: '1.10.0.0'
 ourcompose_bitcoind_storage: 'local'
 # change to 18333 if running testnet
 ourcompose_bitcoind_ports: '8333:8333'

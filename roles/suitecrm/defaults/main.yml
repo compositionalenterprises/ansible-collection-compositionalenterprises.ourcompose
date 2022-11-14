@@ -1,7 +1,9 @@
 ---
 ourcompose_suitecrm_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_suitecrm_state }}"
-ourcompose_suitecrm_version: '7-debian-10'
+# OLD: https://docs.suitecrm.com/admin/releases/
+# NEW: https://docs.suitecrm.com/8.x/admin/releases/
+ourcompose_suitecrm_version: '8.1.3'
 ourcompose_suitecrm_storage: 'local'
 ourcompose_suitecrm_admin_password: 'testpassword'
 ourcompose_suitecrm_backend_password: 'testpassword'

@@ -1,6 +1,7 @@
 ---
 ourcompose_mariadb_state: 'running'
-ourcompose_mariadb_version: '10.5'
+# https://mariadb.com/kb/en/release-notes/
+ourcompose_mariadb_version: '10.9'
 ourcompose_mariadb_storage: 'local'
 ourcompose_mariadb_restarted: 'yes'
 ourcompose_mariadb_root_password: 'testpassword'

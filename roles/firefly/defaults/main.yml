@@ -1,7 +1,8 @@
 ---
 ourcompose_firefly_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_firefly_state }}"
-ourcompose_firefly_version: 'version-5.5.13'
+# https://github.com/firefly-iii/firefly-iii/releases
+ourcompose_firefly_version: 'version-5.7'
 ourcompose_firefly_storage: 'local'
 ourcompose_firefly_admin_password: 'testpassword1234'
 ourcompose_firefly_backend_password: 'testpassword'
