@@ -1,7 +1,8 @@
 ---
 ourcompose_akaunting_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_akaunting_state }}"
-ourcompose_akaunting_version: '2.1'
+# https://github.com/akaunting/akaunting/releases
+ourcompose_akaunting_version: '3.0'
 ourcompose_akaunting_storage: 'local'
 ourcompose_akaunting_backend_password: 'testpassword'
 ourcompose_akaunting_admin_password: "testpassword"

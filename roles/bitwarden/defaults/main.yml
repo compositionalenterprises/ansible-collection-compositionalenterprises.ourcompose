@@ -1,7 +1,8 @@
 ---
 ourcompose_bitwarden_state: 'running'
 ourcompose_dep_state: "{{ ourcompose_bitwarden_state }}"
-ourcompose_bitwarden_version: '1.23.1'
+# https://github.com/dani-garcia/vaultwarden/releases
+ourcompose_bitwarden_version: '1.25.2'
 ourcompose_bitwarden_storage: 'local'
 ourcompose_bitwarden_admin_password: 'testpassword'
 ourcompose_bitwarden_admin_token: 'testpassword'
