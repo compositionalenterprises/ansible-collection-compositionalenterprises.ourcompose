@@ -112,9 +112,3 @@
       php wp-cli.phar core update-db;
       \"
     "
-
-- name: (running) Reload nginx container
-  shell:
-    cmd: docker exec -i nginx nginx -s reload
-  register: ourcompose_bind_mountpoints_reload
-

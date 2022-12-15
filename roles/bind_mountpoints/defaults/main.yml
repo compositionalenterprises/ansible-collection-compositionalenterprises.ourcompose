@@ -1,2 +1,3 @@
 ---
 ourcompose_bind_mountpoints_mounts: []
+ourcompose_bind_mountpoints_container: ''
